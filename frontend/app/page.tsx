@@ -300,6 +300,13 @@ export default function HomePage() {
             <span className="bg-gradient-to-r from-pink-100 to-pink-200 text-pink-700 px-6 py-3 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105">📊 Advanced Analytics</span>
           </div>
         </div>
+        {/* Signature Section */}
+<footer className="py-6 mt-16 text-center">
+  <p className="text-sm text-gray-500">
+    Made with ❤️ by <span className="font-bold">Dheem</span>
+  </p>
+</footer>
+
       </main>
     </div>
   );

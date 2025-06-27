@@ -75,9 +75,7 @@ export default function LoginPage() {
             <h2 className="text-4xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent mb-3">
               Welcome Back
             </h2>
-            <p className="text-gray-600 text-lg">
-              Sign in to continue your AI-powered career journey
-            </p>
+            
           </div>
           
           {/* Login Form */}
@@ -93,7 +91,7 @@ export default function LoginPage() {
                     {...register('email', { 
                       required: 'Email is required',
                       pattern: {
-                        value: /^\\S+@\\S+$/i,
+                        value: /^\S+@\S+$/i,
                         message: 'Invalid email address'
                       }
                     })}

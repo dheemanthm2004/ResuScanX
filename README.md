@@ -76,22 +76,24 @@ npm install
 npm run dev
 ```
 
-**🌐 Live Demo:** [resuscanx.vercel.app](https://resuscanx.vercel.app)
+**🌐 Live Demo:** [resuscanx.vercel.app](https://resuscanx.vercel.app)  
+**🤖 Free ATS Check:** [resuscanx.vercel.app/ats-checker](https://resuscanx.vercel.app/ats-checker)
 
 ## ⚙️ Environment Configuration
 
 ### Backend (.env)
 ```env
 PORT=12001
-NODE_ENV=development
-MONGO_URI=your_mongodb_atlas_uri
-JWT_SECRET=your_super_secret_key
+NODE_ENV=production
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/resuscanx
+JWT_SECRET=your-super-secure-jwt-secret-key
+JWT_LIFETIME=30d
 
 # AI API Keys (All Free Tier Available)
-OPEN_ROUTER_API_KEY=sk-or-v1-your-key
-MISTRAL_API_KEY=your-mistral-key
-COHERE_API_KEY=your-cohere-key
-GEMINI_API_KEY=your-gemini-key
+OPEN_ROUTER_API_KEY=sk-or-v1-your-openrouter-key
+MISTRAL_API_KEY=your-mistral-api-key
+COHERE_API_KEY=your-cohere-api-key
+GEMINI_API_KEY=AIzaSy-your-gemini-key
 ```
 
 ### Frontend (Optional)
@@ -248,7 +250,7 @@ MIT License - Build amazing things with ResuScanX!
 <div align="center">
   <strong>🌟 Star this repository if ResuScanX helped you!</strong>
   <br>
-  <em>Built with 💜 for the next generation of job seekers by Dheem</em>
+  <em>Made with ❤️ by Dheem</em>
   <br><br>
   
   **Ready to transform your career? [Try ResuScanX Now →](https://resuscanx.vercel.app)**

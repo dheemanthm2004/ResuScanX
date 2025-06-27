@@ -82,9 +82,7 @@ export default function RegisterPage() {
             <h2 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-3">
               Join ResuScanX
             </h2>
-            <p className="text-gray-600 text-lg">
-              Start your AI-powered career transformation today
-            </p>
+            
           </div>
           
           {/* Benefits */}
@@ -143,7 +141,7 @@ export default function RegisterPage() {
                     {...register('email', { 
                       required: 'Email is required',
                       pattern: {
-                        value: /^\\S+@\\S+$/i,
+                        value: /^\S+@\S+$/i,
                         message: 'Invalid email address'
                       }
                     })}
