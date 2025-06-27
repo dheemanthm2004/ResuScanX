@@ -65,24 +65,24 @@ export default function HomePage() {
             ✨ Powered by Advanced AI Technology
           </div>
           <h2 className="text-6xl font-bold text-gray-900 sm:text-8xl mb-8 leading-tight">
-            Your Resume's
-            <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 bg-clip-text text-transparent block">AI Career Coach</span>
+            Match Your Resume to
+            <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 bg-clip-text text-transparent block">Any Job Description</span>
           </h2>
           <p className="text-2xl text-gray-600 max-w-4xl mx-auto leading-relaxed mb-6">
-            Transform your career with AI-powered resume analysis. Get instant insights, skill gap identification, and personalized recommendations.
+            Upload your resume + paste any job description. Get instant AI-powered compatibility analysis, skill gap identification, and personalized recommendations to land that job.
           </p>
           <div className="flex flex-wrap justify-center gap-6 text-lg text-gray-700 mb-8">
             <span className="flex items-center bg-white/60 px-4 py-2 rounded-2xl shadow-sm">
-              🤖 <span className="ml-2 font-medium">Multi-AI Analysis</span>
+              📝 <span className="ml-2 font-medium">Resume vs Job Description</span>
             </span>
             <span className="flex items-center bg-white/60 px-4 py-2 rounded-2xl shadow-sm">
-              📊 <span className="ml-2 font-medium">Real-time Insights</span>
+              📊 <span className="ml-2 font-medium">Compatibility Scoring</span>
             </span>
             <span className="flex items-center bg-white/60 px-4 py-2 rounded-2xl shadow-sm">
-              🎯 <span className="ml-2 font-medium">ATS Compatibility</span>
+              🎯 <span className="ml-2 font-medium">Skill Gap Analysis</span>
             </span>
             <span className="flex items-center bg-white/60 px-4 py-2 rounded-2xl shadow-sm">
-              💬 <span className="ml-2 font-medium">AI Career Coach</span>
+              💬 <span className="ml-2 font-medium">AI Interview Prep</span>
             </span>
           </div>
           <div className="mt-10 space-y-8">
@@ -103,15 +103,49 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* How It Works */}
+        <div className="mt-24">
+          <div className="text-center mb-16">
+            <h3 className="text-4xl font-bold text-gray-900 mb-6">How It Works</h3>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">Simple 3-step process to optimize your resume for any job</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-violet-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                <span className="text-white font-bold text-2xl">1</span>
+              </div>
+              <h4 className="text-2xl font-bold text-gray-900 mb-4">Upload Resume</h4>
+              <p className="text-gray-600 text-lg leading-relaxed">Drop your PDF resume file. Our AI extracts all your skills, experience, and qualifications.</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                <span className="text-white font-bold text-2xl">2</span>
+              </div>
+              <h4 className="text-2xl font-bold text-gray-900 mb-4">Paste Job Description</h4>
+              <p className="text-gray-600 text-lg leading-relaxed">Copy-paste any job posting you want to apply for. AI analyzes the requirements.</p>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                <span className="text-white font-bold text-2xl">3</span>
+              </div>
+              <h4 className="text-2xl font-bold text-gray-900 mb-4">Get Match Analysis</h4>
+              <p className="text-gray-600 text-lg leading-relaxed">See compatibility score, skill gaps, and get targeted recommendations to land that job.</p>
+            </div>
+          </div>
+        </div>
+
         {/* Features */}
-        <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="mt-32 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="card-gradient text-center group hover:scale-105 transition-transform duration-300">
             <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl w-fit mx-auto mb-6">
               <FileText className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-xl font-bold mb-3 text-gray-800">🧠 Smart AI Parsing</h3>
+            <h3 className="text-xl font-bold mb-3 text-gray-800">📝 Resume-JD Matching</h3>
             <p className="text-gray-600 leading-relaxed">
-              Advanced NLP extracts skills, experience, and key insights from your PDF resume with precision.
+              Upload your resume PDF + paste job description. AI analyzes compatibility and identifies exact skill matches.
             </p>
           </div>
           
@@ -119,9 +153,9 @@ export default function HomePage() {
             <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl w-fit mx-auto mb-6">
               <BarChart3 className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-xl font-bold mb-3 text-gray-800">📊 Multi-AI Analysis</h3>
+            <h3 className="text-xl font-bold mb-3 text-gray-800">📊 Compatibility Scoring</h3>
             <p className="text-gray-600 leading-relaxed">
-              Powered by OpenRouter, Mistral & Cohere APIs for comprehensive compatibility scoring.
+              Get precise match percentage showing how well your resume aligns with the job requirements.
             </p>
           </div>
           
@@ -129,9 +163,9 @@ export default function HomePage() {
             <div className="p-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl w-fit mx-auto mb-6">
               <Zap className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-xl font-bold mb-3 text-gray-800">💬 AI Career Coach</h3>
+            <h3 className="text-xl font-bold mb-3 text-gray-800">💬 Job-Specific Coaching</h3>
             <p className="text-gray-600 leading-relaxed">
-              Interactive Gemini-powered assistant provides personalized career guidance and tips.
+              AI coach understands both your resume and the job description to give targeted interview preparation.
             </p>
           </div>
         </div>
@@ -194,8 +228,8 @@ export default function HomePage() {
                   <FileText className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">Smart Resume Analysis</h4>
-                  <p className="text-gray-600">AI extracts and analyzes every detail from your PDF resume with precision matching</p>
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">Resume vs Job Description</h4>
+                  <p className="text-gray-600">Upload resume PDF + paste job description. AI compares them to find exact skill matches and gaps</p>
                 </div>
               </div>
               
@@ -204,8 +238,8 @@ export default function HomePage() {
                   <BarChart3 className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">Multi-AI Scoring</h4>
-                  <p className="text-gray-600">Four different AI systems analyze your resume for comprehensive compatibility scoring</p>
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">Compatibility Percentage</h4>
+                  <p className="text-gray-600">Get precise match score showing how well your skills align with job requirements</p>
                 </div>
               </div>
               
@@ -226,8 +260,8 @@ export default function HomePage() {
                   <Brain className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">AI Career Coaching</h4>
-                  <p className="text-gray-600">Interactive Gemini-powered assistant provides personalized career guidance and interview tips</p>
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">Job-Specific Coaching</h4>
+                  <p className="text-gray-600">AI coach knows your resume AND the job description to give targeted interview preparation</p>
                 </div>
               </div>
               
