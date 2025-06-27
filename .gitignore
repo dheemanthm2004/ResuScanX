@@ -1,0 +1,61 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js build output
+.next/
+out/
+
+# TypeScript output
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE/editor config files
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Coverage directory used by tools like Jest
+coverage/
+
+# npm package-lock and yarn.lock
+package-lock.json
+yarn.lock
+
+# Miscellaneous files
+*.swp
+*.swo
+*.bak
+*.tmp
+*.pid
+*.seed
+*.db
+
+# MongoDB data files (backend-specific)
+resuscan/backend/uploads/
+
+# Tailwind CSS cache
+.tailwind/
+
+# Next.js specific caching
+.next/cache/
+
+# Prisma (if applicable)
+.prisma/
+
+# PM2 process manager logs (backend)
+pm2/
