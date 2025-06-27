@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Upload, CheckCircle, AlertCircle, Info, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { atsAPI } from '@/lib/api';
 
@@ -21,8 +22,15 @@ interface ATSResult {
 export default function ATSCheckerPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ATSResult | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const router = useRouter();
   
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ATSForm>();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+  }, []);
 
   const onSubmit = async (data: ATSForm) => {
     setLoading(true);
@@ -219,9 +227,18 @@ export default function ATSCheckerPage() {
           <p className="text-gray-600 mb-6">
             Get AI-powered resume analysis, skill gap identification, and personalized career coaching.
           </p>
-          <Link href="/register" className="btn-primary">
-            ✨ Try Full Analysis Free
-          </Link>
+          {isLoggedIn ? (
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="btn-primary"
+            >
+              ✨ Go to Full Analysis
+            </button>
+          ) : (
+            <Link href="/register" className="btn-primary">
+              ✨ Try Full Analysis Free
+            </Link>
+          )}
         </div>
       </div>
     </div>
