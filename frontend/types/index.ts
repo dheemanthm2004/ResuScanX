@@ -20,6 +20,12 @@ export interface AnalysisResult {
   aiReport: string;
   fallbackReport?: string;
   aiProvider?: string;
+  atsAnalysis?: {
+    atsScore: number;
+    issues: string[];
+    recommendations: string[];
+    summary: string;
+  };
   createdAt: string;
   jobDescription?: string;
 }

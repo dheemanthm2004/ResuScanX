@@ -6,8 +6,9 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { analysisAPI } from '@/lib/api';
 import { AnalysisResult, AnalysisHistory, User } from '@/types';
-import { Upload, FileText, BarChart3, History, LogOut, Brain, Eye, TrendingUp, AlertCircle } from 'lucide-react';
+import { Upload, FileText, BarChart3, History, LogOut, Brain, Eye, TrendingUp, AlertCircle, Home, MessageCircle, CheckCircle } from 'lucide-react';
 import SkillsChart from '@/components/SkillsChart';
+import ChatBot from '@/components/ChatBot';
 
 interface AnalysisForm {
   resume: FileList;
@@ -19,7 +20,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<AnalysisHistory[]>([]);
-  const [activeTab, setActiveTab] = useState<'analyze' | 'history'>('analyze');
+  const [activeTab, setActiveTab] = useState<'analyze' | 'history' | 'ats'>('analyze');
+  const [showChat, setShowChat] = useState(false);
   const router = useRouter();
   
   const { register, handleSubmit, formState: { errors }, reset } = useForm<AnalysisForm>();
@@ -88,6 +90,13 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
+              <button
+                onClick={() => router.push('/')}
+                className="flex items-center text-gray-600 hover:text-gray-900 mr-6 transition-colors"
+              >
+                <Home className="h-5 w-5 mr-2" />
+                Home
+              </button>
               <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl mr-3">
                 <Brain className="h-6 w-6 text-white" />
               </div>
@@ -131,6 +140,17 @@ export default function DashboardPage() {
           >
             <History className="inline h-4 w-4 mr-2" />
             📈 History
+          </button>
+          <button
+            onClick={() => setActiveTab('ats')}
+            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              activeTab === 'ats' 
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg' 
+                : 'bg-white/80 text-gray-600 hover:bg-white hover:shadow-md'
+            }`}
+          >
+            <CheckCircle className="inline h-4 w-4 mr-2" />
+            🤖 ATS Check
           </button>
         </div>
 
@@ -193,107 +213,136 @@ export default function DashboardPage() {
             {/* Results */}
             {result && (
               <div className="space-y-6">
-                {/* Chart and Score */}
-                <SkillsChart 
-                  matchedSkills={result.analysis.skillsMatch.length}
-                  missingSkills={result.analysis.skillsGap.length}
-                  matchScore={result.analysis.matchScore}
-                />
+                {/* Header with Chat Toggle */}
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-900">Analysis Results</h2>
+                  <button
+                    onClick={() => setShowChat(!showChat)}
+                    className={`flex items-center px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+                      showChat 
+                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' 
+                        : 'bg-white/80 text-gray-600 hover:bg-white hover:shadow-md'
+                    }`}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    AI Assistant (Gemini)
+                  </button>
+                </div>
 
-                {/* Detailed Analysis */}
-                <div className="card">
-                  <h2 className="text-xl font-semibold mb-4 flex items-center">
-                    <TrendingUp className="h-5 w-5 mr-2 text-primary" />
-                    Detailed Analysis
-                  </h2>
-                  
-                  {/* Summary */}
-                  <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-                    <h3 className="font-semibold text-gray-900 mb-2 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-2" />
-                      Summary
-                    </h3>
-                    <p className="text-gray-700">{result.analysis.summary}</p>
-                  </div>
+                <div className={`grid gap-6 ${showChat ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
+                  <div className={showChat ? 'lg:col-span-2 space-y-6' : 'space-y-6'}>
+                    {/* Chart and Score */}
+                    <SkillsChart 
+                      matchedSkills={result.analysis.skillsMatch.length}
+                      missingSkills={result.analysis.skillsGap.length}
+                      matchScore={result.analysis.matchScore}
+                    />
 
-                  {/* Skills Breakdown */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Matching Skills */}
-                    <div>
-                      <h3 className="font-semibold text-green-700 mb-3 flex items-center">
-                        ✓ Matching Skills ({result.analysis.skillsMatch.length})
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {result.analysis.skillsMatch.map((skill, index) => (
-                          <span key={index} className="skill-match">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Skills Gap */}
-                    <div>
-                      <h3 className="font-semibold text-red-700 mb-3 flex items-center">
-                        ✗ Skills to Develop ({result.analysis.skillsGap.length})
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {result.analysis.skillsGap.map((skill, index) => (
-                          <span key={index} className="skill-gap">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Recommendations */}
-                  <div className="mt-6">
-                    <h3 className="font-semibold text-gray-900 mb-3">💡 Recommendations</h3>
-                    <div className="bg-yellow-50 p-4 rounded-lg">
-                      <ul className="space-y-2">
-                        {result.analysis.recommendations.map((rec, index) => (
-                          <li key={index} className="flex items-start">
-                            <span className="text-yellow-600 mr-2">•</span>
-                            <span className="text-gray-700">{rec}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Dual AI Reports */}
-                  <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* AI Report */}
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-                        🤖 {result.aiProvider || 'AI Analysis'}
-                        {result.aiReport && result.aiReport !== '🤖 AI analysis temporarily unavailable' && (
-                          <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Live AI</span>
-                        )}
-                      </h3>
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
-                        <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
-                          {result.aiReport || 'AI analysis in progress...'}
-                        </pre>
-                      </div>
-                    </div>
-
-                    {/* Fallback Report */}
-                    {result.fallbackReport && (
-                      <div>
-                        <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-                          📊 Intelligent Analysis
-                          <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">Algorithm</span>
+                    {/* Detailed Analysis */}
+                    <div className="card">
+                      <h2 className="text-xl font-semibold mb-4 flex items-center">
+                        <TrendingUp className="h-5 w-5 mr-2 text-primary" />
+                        Detailed Analysis
+                      </h2>
+                      
+                      {/* Summary */}
+                      <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                        <h3 className="font-semibold text-gray-900 mb-2 flex items-center">
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          Summary
                         </h3>
-                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
-                          <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
-                            {result.fallbackReport}
-                          </pre>
+                        <p className="text-gray-700">{result.analysis.summary}</p>
+                      </div>
+
+                      {/* Skills Breakdown */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Matching Skills */}
+                        <div>
+                          <h3 className="font-semibold text-green-700 mb-3 flex items-center">
+                            ✓ Matching Skills ({result.analysis.skillsMatch.length})
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {result.analysis.skillsMatch.map((skill, index) => (
+                              <span key={index} className="skill-match">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Skills Gap */}
+                        <div>
+                          <h3 className="font-semibold text-red-700 mb-3 flex items-center">
+                            ✗ Skills to Develop ({result.analysis.skillsGap.length})
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {result.analysis.skillsGap.map((skill, index) => (
+                              <span key={index} className="skill-gap">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    )}
+
+                      {/* Recommendations */}
+                      <div className="mt-6">
+                        <h3 className="font-semibold text-gray-900 mb-3">💡 Recommendations</h3>
+                        <div className="bg-yellow-50 p-4 rounded-lg">
+                          <ul className="space-y-2">
+                            {result.analysis.recommendations.map((rec, index) => (
+                              <li key={index} className="flex items-start">
+                                <span className="text-yellow-600 mr-2">•</span>
+                                <span className="text-gray-700">{rec}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+
+                      {/* Dual AI Reports */}
+                      <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* AI Report */}
+                        <div>
+                          <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                            🤖 {result.aiProvider || 'AI Analysis'}
+                            {result.aiReport && result.aiReport !== '🤖 AI analysis temporarily unavailable' && (
+                              <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">Live AI</span>
+                            )}
+                          </h3>
+                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                            <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
+                              {result.aiReport || 'AI analysis in progress...'}
+                            </pre>
+                          </div>
+                        </div>
+
+                        {/* Fallback Report */}
+                        {result.fallbackReport && (
+                          <div>
+                            <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+                              📊 Intelligent Analysis
+                              <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">Algorithm</span>
+                            </h3>
+                            <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+                              <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
+                                {result.fallbackReport}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Chat Sidebar */}
+                  {showChat && (
+                    <div className="lg:col-span-1">
+                      <div className="sticky top-8">
+                        <ChatBot analysisId={result.id} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -302,7 +351,12 @@ export default function DashboardPage() {
 
         {activeTab === 'history' && (
           <div className="card">
-            <h2 className="text-xl font-semibold mb-4">Analysis History</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Analysis History</h2>
+              <div className="text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full">
+                💬 Click any analysis to chat with AI about your results
+              </div>
+            </div>
             {history.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No analyses yet. Start by uploading your first resume!</p>
             ) : (
@@ -362,6 +416,27 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'ats' && (
+          <div className="card text-center">
+            <div className="p-8">
+              <div className="p-4 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl w-fit mx-auto mb-6">
+                <CheckCircle className="h-12 w-12 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Free ATS Checker</h2>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Check if your resume will pass through Applicant Tracking Systems. 
+                No signup required - completely free!
+              </p>
+              <button
+                onClick={() => router.push('/ats-checker')}
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
+              >
+                🤖 Check ATS Compatibility
+              </button>
+            </div>
           </div>
         )}
       </div>

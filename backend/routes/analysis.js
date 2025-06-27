@@ -46,7 +46,7 @@ router.post('/analyze', auth, upload.single('resume'), async (req, res) => {
     const resumeText = pdfData.text;
 
     // AI Analysis
-    const { analysis, aiReport, fallbackReport, aiProvider } = await aiService.analyzeResume(resumeText, jobDescription);
+    const { analysis, aiReport, fallbackReport, aiProvider, atsAnalysis } = await aiService.analyzeResume(resumeText, jobDescription);
 
     // Save analysis to database
     const analysisDoc = new Analysis({
@@ -66,6 +66,7 @@ router.post('/analyze', auth, upload.single('resume'), async (req, res) => {
       aiReport: typeof aiReport === 'string' ? aiReport : '🤖 AI analysis temporarily unavailable',
       fallbackReport,
       aiProvider,
+      atsAnalysis,
       createdAt: analysisDoc.createdAt
     });
 

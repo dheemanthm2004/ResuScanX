@@ -60,7 +60,7 @@ export default function HomePage() {
             Get instant AI-powered insights on resume-job compatibility. 
             <span className="text-gradient font-semibold">Multi-AI analysis</span> meets beautiful design.
           </p>
-          <div className="mt-10">
+          <div className="mt-10 space-y-4">
             {isLoggedIn ? (
               <Link href="/dashboard" className="btn-primary text-lg px-10 py-4">
                 🚀 Start Free Analysis
@@ -70,6 +70,11 @@ export default function HomePage() {
                 ✨ Get Started Free
               </Link>
             )}
+            <div className="mt-4">
+              <Link href="/ats-checker" className="btn-secondary text-lg px-8 py-3">
+                🤖 Free ATS Checker
+              </Link>
+            </div>
           </div>
         </div>
 

@@ -41,4 +41,13 @@ export const chatAPI = {
     api.post(`/chat/analysis/${analysisId}`, { message }),
 };
 
+export const atsAPI = {
+  checkATS: (formData: FormData) =>
+    api.post('/ats/check', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  
+  getTips: () => api.get('/ats/tips'),
+};
+
 export default api;

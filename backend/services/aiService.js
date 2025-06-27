@@ -1,5 +1,6 @@
 const axios = require('axios');
 const natural = require('natural');
+const atsService = require('./atsService');
 
 class AIService {
   // Extract skills using NLP
@@ -225,12 +226,14 @@ ${analysis.recommendations.map(rec => `• ${rec}`).join('\n')}
     };
 
     const reports = await this.generateAIReport(resumeText, jobDescription, analysis);
+    const atsAnalysis = await atsService.checkATSCompatibility(resumeText, jobDescription);
     
     return { 
       analysis, 
       aiReport: reports.aiReport,
       fallbackReport: reports.fallbackReport,
-      aiProvider: reports.aiProvider
+      aiProvider: reports.aiProvider,
+      atsAnalysis
     };
   }
 
