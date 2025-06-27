@@ -155,11 +155,15 @@ export default function HomePage() {
       </Link>
 
       <Link
-        href="/ats-checker"
-        className="px-10 py-4 text-lg font-bold rounded-full bg-gradient-to-r from-gray-100 to-white border-2 border-gray-300 shadow-md hover:shadow-xl text-gray-800 hover:border-violet-300 hover:from-violet-50 hover:to-white transition-all duration-200 transform hover:scale-105"
-      >
-        🤖 Free ATS Checker
-      </Link>
+  href="/ats-checker"
+  className="relative inline-block px-10 py-3 pr-16 text-lg font-semibold rounded-full bg-white border-2 border-green-500 text-green-700 shadow-md hover:bg-green-100 hover:text-green-900 hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+>
+  <span className="absolute -top-3 -right-3 bg-green-500 text-white text-xs font-bold px-2 py-[2px] rounded-full shadow select-none uppercase tracking-wide">
+    No Login Required
+  </span>
+  🤖 Free ATS Checker
+</Link>
+
     </>
   )}
 </div>
