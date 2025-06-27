@@ -137,6 +137,29 @@ Provide brief professional assessment.`
     return response.data.generations[0].text;
   }
 
+  async chatWithAI(context) {
+    try {
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          contents: [{
+            parts: [{ text: context }]
+          }]
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+      return response.data.candidates[0].content.parts[0].text;
+    } catch (error) {
+      console.log('Gemini chat error:', error.response?.data || error.message);
+      return "I'm here to help with your resume analysis! The AI is currently busy, but I can still provide general career advice.";
+    }
+  }
+
   generateFallbackReport(analysis) {
     const verdict = analysis.matchScore >= 80 ? 'EXCELLENT MATCH' : 
                    analysis.matchScore >= 60 ? 'GOOD MATCH' : 

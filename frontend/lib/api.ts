@@ -36,4 +36,9 @@ export const analysisAPI = {
   getAnalysis: (id: string) => api.get(`/analysis/${id}`),
 };
 
+export const chatAPI = {
+  sendMessage: (analysisId: string, message: string) =>
+    api.post(`/chat/analysis/${analysisId}`, { message }),
+};
+
 export default api;

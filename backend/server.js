@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const analysisRoutes = require('./routes/analysis');
+const chatRoutes = require('./routes/chat');
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use('/uploads', express.static('uploads'));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/analysis', analysisRoutes);
+app.use('/api/chat', chatRoutes);
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)

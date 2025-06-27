@@ -302,7 +302,11 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-4">
                 {history.map((item) => (
-                  <div key={item._id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div 
+                    key={item._id} 
+                    onClick={() => router.push(`/analysis/${item._id}`)}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 hover:border-blue-300 transition-all cursor-pointer group"
+                  >
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <div className={`text-2xl font-bold ${getScoreColor(item.analysis.matchScore)}`}>
@@ -320,6 +324,7 @@ export default function DashboardPage() {
                           <span className="text-red-600">
                             ✗ {item.analysis.skillsGap.length} missing
                           </span>
+                          <Eye className="h-4 w-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
                         </div>
                       </div>
                     </div>
