@@ -82,17 +82,23 @@ export default function DashboardPage() {
   if (!user) return <div>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white/80 backdrop-blur-md shadow-lg border-b border-white/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Brain className="h-8 w-8 text-primary mr-2" />
-              <h1 className="text-xl font-bold text-gray-900">ResuScan Dashboard</h1>
+              <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl mr-3">
+                <Brain className="h-6 w-6 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-gradient">ResuScanX Dashboard</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-600">Welcome, {user.name}</span>
+              <div className="flex items-center space-x-3">
+                <div className="px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full text-sm font-medium text-blue-700">
+                  👋 Hey, {user.name}!
+                </div>
+              </div>
               <button onClick={logout} className="text-gray-500 hover:text-gray-700">
                 <LogOut className="h-5 w-5" />
               </button>
@@ -103,28 +109,28 @@ export default function DashboardPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tabs */}
-        <div className="flex space-x-1 mb-8">
+        <div className="flex space-x-2 mb-8">
           <button
             onClick={() => setActiveTab('analyze')}
-            className={`px-4 py-2 rounded-lg font-medium ${
+            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
               activeTab === 'analyze' 
-                ? 'bg-primary text-white' 
-                : 'bg-white text-gray-600 hover:bg-gray-50'
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' 
+                : 'bg-white/80 text-gray-600 hover:bg-white hover:shadow-md'
             }`}
           >
             <FileText className="inline h-4 w-4 mr-2" />
-            New Analysis
+            🚀 New Analysis
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`px-4 py-2 rounded-lg font-medium ${
+            className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
               activeTab === 'history' 
-                ? 'bg-primary text-white' 
-                : 'bg-white text-gray-600 hover:bg-gray-50'
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg' 
+                : 'bg-white/80 text-gray-600 hover:bg-white hover:shadow-md'
             }`}
           >
             <History className="inline h-4 w-4 mr-2" />
-            History
+            📈 History
           </button>
         </div>
 
@@ -219,7 +225,7 @@ export default function DashboardPage() {
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {result.analysis.skillsMatch.map((skill, index) => (
-                          <span key={index} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                          <span key={index} className="skill-match">
                             {skill}
                           </span>
                         ))}
@@ -233,7 +239,7 @@ export default function DashboardPage() {
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {result.analysis.skillsGap.map((skill, index) => (
-                          <span key={index} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                          <span key={index} className="skill-gap">
                             {skill}
                           </span>
                         ))}
@@ -342,7 +348,7 @@ export default function DashboardPage() {
                     {/* Skills Preview */}
                     <div className="mt-3 flex flex-wrap gap-1">
                       {item.analysis.skillsMatch.slice(0, 5).map((skill, index) => (
-                        <span key={index} className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                        <span key={index} className="skill-match text-xs">
                           {skill}
                         </span>
                       ))}
