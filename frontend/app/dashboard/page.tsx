@@ -8,6 +8,7 @@ import { analysisAPI } from '@/lib/api';
 import { AnalysisResult, AnalysisHistory, User } from '@/types';
 import { Upload, FileText, BarChart3, History, LogOut, Eye, TrendingUp, AlertCircle, Home, MessageCircle, CheckCircle, Sparkles, Zap } from 'lucide-react';
 import SkillsChart from '@/components/SkillsChart';
+import ComprehensiveChart from '@/components/ComprehensiveChart';
 import ChatBot from '@/components/ChatBot';
 
 interface AnalysisForm {
@@ -267,72 +268,16 @@ export default function DashboardPage() {
                 {/* Results Grid */}
                 <div className={`grid gap-8 ${showChat ? 'grid-cols-1 xl:grid-cols-4' : 'grid-cols-1'}`}>
                   <div className={showChat ? 'xl:col-span-3 space-y-8' : 'space-y-8'}>
-                    {/* Comprehensive Analysis Chart */}
+                    {/* Visual Charts */}
                     {result.analysis.breakdown ? (
-                      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-6">Comprehensive Analysis</h3>
-                        
-                        {/* Overall Score */}
-                        <div className="text-center mb-8">
-                          <div className={`text-6xl font-bold mb-4 ${
-                            result.analysis.matchScore >= 70 ? 'text-emerald-600' :
-                            result.analysis.matchScore >= 40 ? 'text-amber-600' : 'text-rose-600'
-                          }`}>
-                            {result.analysis.matchScore}%
-                          </div>
-                          <p className="text-xl text-gray-600 mb-2">Overall Match Score</p>
-                          <div className={`inline-flex px-4 py-2 rounded-full text-sm font-bold ${
-                            result.analysis.verdict === 'QUALIFIED' ? 'bg-emerald-100 text-emerald-800' :
-                            result.analysis.verdict === 'UNDERQUALIFIED' ? 'bg-rose-100 text-rose-800' :
-                            result.analysis.verdict === 'OVERQUALIFIED' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {result.analysis.verdict?.replace('_', ' ')}
-                          </div>
-                        </div>
-
-                        {/* Breakdown Scores */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                          <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
-                            <div className={`text-4xl font-bold mb-2 ${
-                              result.analysis.breakdown.eligibilityScore >= 70 ? 'text-emerald-600' :
-                              result.analysis.breakdown.eligibilityScore >= 40 ? 'text-amber-600' : 'text-rose-600'
-                            }`}>
-                              {result.analysis.breakdown.eligibilityScore}%
-                            </div>
-                            <p className="text-gray-700 font-semibold">Eligibility Score</p>
-                            <p className="text-sm text-gray-600 mt-1">Experience • Education • Seniority</p>
-                          </div>
-                          
-                          <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl">
-                            <div className={`text-4xl font-bold mb-2 ${
-                              result.analysis.breakdown.skillScore >= 70 ? 'text-emerald-600' :
-                              result.analysis.breakdown.skillScore >= 40 ? 'text-amber-600' : 'text-rose-600'
-                            }`}>
-                              {result.analysis.breakdown.skillScore}%
-                            </div>
-                            <p className="text-gray-700 font-semibold">Skills Match</p>
-                            <p className="text-sm text-gray-600 mt-1">{result.analysis.skillsMatch.length} matches • {result.analysis.skillsGap.length} gaps</p>
-                          </div>
-                        </div>
-
-                        {/* Primary Concerns */}
-                        {result.analysis.breakdown.primaryConcerns.length > 0 && (
-                          <div className="mb-6 p-6 bg-gradient-to-r from-rose-50 to-red-50 rounded-2xl border border-rose-200">
-                            <h4 className="font-bold text-rose-800 mb-3 flex items-center">
-                              🚫 Critical Issues
-                            </h4>
-                            <ul className="space-y-2">
-                              {result.analysis.breakdown.primaryConcerns.map((concern, index) => (
-                                <li key={index} className="flex items-start text-rose-700">
-                                  <span className="mr-2 mt-1">•</span>
-                                  <span>{concern}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
+                      <ComprehensiveChart
+                        matchScore={result.analysis.matchScore}
+                        eligibilityScore={result.analysis.breakdown.eligibilityScore}
+                        skillScore={result.analysis.breakdown.skillScore}
+                        skillsMatch={result.analysis.skillsMatch.length}
+                        skillsGap={result.analysis.skillsGap.length}
+                        verdict={result.analysis.verdict || 'UNKNOWN'}
+                      />
                     ) : (
                       <SkillsChart 
                         matchedSkills={result.analysis.skillsMatch.length}
@@ -402,28 +347,36 @@ export default function DashboardPage() {
                       </div>
 
                       {/* AI Reports */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
-                          <h4 className="font-bold text-gray-900 mb-4 flex items-center">
-                            🤖 {result.aiProvider || 'AI Analysis'}
-                            {result.aiReport && result.aiReport !== '🤖 AI analysis temporarily unavailable' && (
-                              <span className="ml-2 px-3 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full font-medium">Live AI</span>
+                      <div className="space-y-6">
+                        {/* Detailed AI Analysis */}
+                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-8 border border-blue-200">
+                          <h4 className="font-bold text-gray-900 mb-6 flex items-center text-xl">
+                            🤖 {result.aiProvider || 'Multi-AI Detailed Analysis'}
+                            {result.aiReport && !result.aiReport.includes('temporarily unavailable') && (
+                              <span className="ml-3 px-4 py-2 bg-emerald-100 text-emerald-700 text-sm rounded-full font-medium">Live AI Report</span>
                             )}
                           </h4>
-                          <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">
-                            {result.aiReport || 'AI analysis in progress...'}
-                          </pre>
+                          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 max-h-96 overflow-y-auto">
+                            <div className="prose prose-sm max-w-none">
+                              <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">
+                                {result.aiReport || 'Generating comprehensive AI analysis...'}
+                              </pre>
+                            </div>
+                          </div>
                         </div>
 
+                        {/* Algorithm Analysis */}
                         {result.fallbackReport && (
-                          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200">
-                            <h4 className="font-bold text-gray-900 mb-4 flex items-center">
+                          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-8 border border-purple-200">
+                            <h4 className="font-bold text-gray-900 mb-6 flex items-center text-xl">
                               📊 Algorithm Analysis
-                              <span className="ml-2 px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">Algorithm</span>
+                              <span className="ml-3 px-4 py-2 bg-purple-100 text-purple-700 text-sm rounded-full font-medium">Structured Analysis</span>
                             </h4>
-                            <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">
-                              {result.fallbackReport}
-                            </pre>
+                            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6">
+                              <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">
+                                {result.fallbackReport}
+                              </pre>
+                            </div>
                           </div>
                         )}
                       </div>

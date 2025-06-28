@@ -52,91 +52,153 @@ class AIService {
     return (intersection.size / union.size) * 100;
   }
 
-  // Generate dual AI reports
+  // Generate detailed AI reports with full resume and JD analysis
   async generateAIReport(resumeText, jobDescription, analysis) {
+    const detailedPrompt = `COMPREHENSIVE RESUME ANALYSIS REPORT
+
+FULL RESUME CONTENT:
+${resumeText.substring(0, 4000)}
+
+FULL JOB DESCRIPTION:
+${jobDescription.substring(0, 2500)}
+
+CURRENT ANALYSIS SUMMARY:
+- Match Score: ${analysis.matchScore}%
+- Skills Match: ${analysis.skillsMatch?.join(', ') || 'None'}
+- Skills Gap: ${analysis.skillsGap?.join(', ') || 'None'}
+- Verdict: ${analysis.verdict}
+
+Provide a DETAILED, COMPREHENSIVE analysis covering:
+
+1. EXPERIENCE ANALYSIS (200+ words):
+   - Analyze candidate's work history in detail
+   - Compare with job requirements
+   - Identify experience gaps or strengths
+   - Assess career progression
+
+2. SKILLS ASSESSMENT (200+ words):
+   - Deep dive into technical skills match
+   - Evaluate skill levels and proficiency
+   - Identify critical missing skills
+   - Suggest skill development priorities
+
+3. EDUCATION & QUALIFICATIONS (150+ words):
+   - Review educational background
+   - Assess relevance to role requirements
+   - Identify certification needs
+   - Evaluate academic achievements
+
+4. ROLE SUITABILITY (200+ words):
+   - Overall fit for the specific position
+   - Seniority level appropriateness
+   - Cultural and team fit assessment
+   - Growth potential in the role
+
+5. ACTIONABLE RECOMMENDATIONS (200+ words):
+   - Specific steps to improve candidacy
+   - Timeline for skill development
+   - Alternative career paths if unsuitable
+   - Interview preparation advice
+
+6. HONEST VERDICT (100+ words):
+   - Final recommendation (Hire/Don't Hire/Maybe)
+   - Key reasons for decision
+   - Probability of success in role
+
+Total response should be 1000+ words. Be detailed, specific, and reference actual content from the resume and job description.`;
+
     const reports = await Promise.allSettled([
-      this.tryOpenRouter(analysis),
-      this.tryMistral(analysis),
-      this.tryCohere(analysis)
+      this.tryDetailedOpenRouter(detailedPrompt),
+      this.tryDetailedMistral(detailedPrompt),
+      this.tryDetailedCohere(detailedPrompt),
+      this.tryDetailedGemini(detailedPrompt)
     ]);
 
     const aiReport = reports.find(r => r.status === 'fulfilled')?.value;
     const fallbackReport = this.generateFallbackReport(analysis);
 
     return {
-      aiReport: aiReport || '🤖 AI analysis temporarily unavailable',
+      aiReport: aiReport || '🤖 AI analysis temporarily unavailable - all providers failed',
       fallbackReport,
-      aiProvider: aiReport ? 'Multi-AI Analysis' : 'Intelligent Fallback'
+      aiProvider: aiReport ? 'Multi-AI Detailed Analysis' : 'Intelligent Fallback'
     };
   }
 
-  async tryOpenRouter(analysis) {
+  async tryDetailedOpenRouter(prompt) {
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
         model: 'meta-llama/llama-3.2-3b-instruct:free',
-        messages: [{
-          role: 'user',
-          content: `Resume Analysis:
-Matched: ${analysis.skillsMatch.join(', ')}
-Missing: ${analysis.skillsGap.join(', ')}
-Score: ${analysis.matchScore}%
-
-Provide brief professional assessment.`
-        }],
-        max_tokens: 300
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1500,
+        temperature: 0.7
       },
       {
         headers: {
           'Authorization': `Bearer ${process.env.OPEN_ROUTER_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        timeout: 5000
+        timeout: 20000
       }
     );
     return response.data.choices[0].message.content;
   }
 
-  async tryMistral(analysis) {
+  async tryDetailedMistral(prompt) {
     const response = await axios.post(
       'https://api.mistral.ai/v1/chat/completions',
       {
         model: 'mistral-tiny',
-        messages: [{
-          role: 'user',
-          content: `Analyze resume match: ${analysis.matchScore}% score. Matched skills: ${analysis.skillsMatch.slice(0,5).join(', ')}. Missing: ${analysis.skillsGap.slice(0,3).join(', ')}. Brief assessment?`
-        }],
-        max_tokens: 200
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1200,
+        temperature: 0.6
       },
       {
         headers: {
           'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        timeout: 5000
+        timeout: 20000
       }
     );
     return response.data.choices[0].message.content;
   }
 
-  async tryCohere(analysis) {
+  async tryDetailedCohere(prompt) {
     const response = await axios.post(
       'https://api.cohere.ai/v1/generate',
       {
         model: 'command-light',
-        prompt: `Resume analysis: ${analysis.matchScore}% match. Skills: ${analysis.skillsMatch.slice(0,3).join(', ')}. Assessment:`,
-        max_tokens: 150
+        prompt: prompt,
+        max_tokens: 1000,
+        temperature: 0.6
       },
       {
         headers: {
           'Authorization': `Bearer ${process.env.COHERE_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        timeout: 5000
+        timeout: 20000
       }
     );
     return response.data.generations[0].text;
   }
+
+  async tryDetailedGemini(prompt) {
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        contents: [{ parts: [{ text: prompt }] }]
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 20000
+      }
+    );
+    return response.data.candidates[0].content.parts[0].text;
+  }
+
+
 
   async chatWithAI(context) {
     try {
