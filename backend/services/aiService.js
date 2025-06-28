@@ -295,7 +295,8 @@ ${analysis.recommendations.map(rec => `• ${rec}`).join('\n')}
 
   // AI-powered comprehensive analysis using multiple providers
   async getComprehensiveAIAnalysis(resumeText, jobDescription) {
-    const prompt = `You are a BRUTAL and HONEST HR recruiter who REJECTS 90% of candidates. Analyze this resume against job requirements with ZERO mercy.
+    console.log('Starting AI analysis...');
+    const prompt = `You are an experienced HR recruiter analyzing resume-job fit. Be realistic - no resume is 100% perfect match.
 
 RESUME:
 ${resumeText.substring(0, 3000)}
@@ -303,67 +304,90 @@ ${resumeText.substring(0, 3000)}
 JOB DESCRIPTION:
 ${jobDescription.substring(0, 2000)}
 
-RULES - BE RUTHLESSLY HONEST:
-1. If JD says "5+ years" and resume shows 0-2 years → AUTOMATIC 10-20% score MAX
-2. If JD says "Senior" and candidate is clearly junior → AUTOMATIC 15% score MAX  
-3. If JD requires degree and candidate has none → AUTOMATIC 25% score MAX
-4. If candidate has NO relevant work experience → AUTOMATIC 10% score MAX
-5. Skills alone CANNOT save a completely unqualified candidate
+ANALYSIS RULES:
+1. MAJOR BLOCKERS (give low scores 10-30%):
+   - Zero relevant work experience for experienced roles (3+ years required)
+   - Completely wrong seniority level (junior applying for senior/lead roles)
+   - Missing critical education requirements (degree required but none)
 
-DO NOT be diplomatic. DO NOT give false hope. BE BRUTAL like a real recruiter would be.
+2. MINOR GAPS (acceptable, give decent scores 60-85%):
+   - Missing 1-2 technical skills (can be learned)
+   - 1-2 years experience gap (close enough)
+   - Different but related background
+   - Some missing nice-to-have requirements
 
-Examples of HONEST responses:
-- "This candidate is completely unqualified for this senior role"
-- "Zero relevant experience for a 5+ years requirement"
-- "This is a junior applying for senior position - immediate rejection"
+3. GOOD MATCHES (give high scores 80-95%):
+   - Meets core requirements with minor gaps
+   - Relevant experience even if not exact
+   - Transferable skills from related roles
+
+Be REALISTIC - most decent candidates should score 60-85%. Only completely unqualified candidates get below 30%.
 
 Respond in JSON format:
 {
-  "matchScore": number (0-100, BE BRUTAL - most should be 10-30%),
+  "matchScore": number (0-100, be realistic - most should be 60-85%),
   "skillsMatch": ["skill1", "skill2"],
   "skillsGap": ["missing1", "missing2"],
-  "experienceGap": "BRUTAL honest assessment - use words like 'completely lacks', 'zero experience', 'unqualified'",
-  "educationGap": "BRUTAL education assessment",
-  "seniorityMismatch": "BRUTAL seniority assessment - call out junior vs senior mismatch",
-  "recommendations": ["HONEST recommendation like 'Do not apply to this role', 'Gain 3+ years experience first'"],
-  "summary": "BRUTAL one-line summary - be harsh",
+  "experienceGap": "realistic assessment of experience match",
+  "educationGap": "realistic education assessment",
+  "seniorityMismatch": "realistic seniority level assessment",
+  "recommendations": ["practical recommendations for improvement"],
+  "summary": "balanced, realistic summary",
   "verdict": "QUALIFIED/UNDERQUALIFIED/COMPLETELY_UNQUALIFIED"
 }`;
 
     // Try multiple AI providers for best results
     const providers = [
-      () => this.tryGeminiAnalysis(prompt),
-      () => this.tryOpenRouterAnalysis(prompt),
-      () => this.tryMistralAnalysis(prompt),
-      () => this.tryCohereAnalysis(prompt)
+      { name: 'Gemini', fn: () => this.tryGeminiAnalysis(prompt) },
+      { name: 'OpenRouter', fn: () => this.tryOpenRouterAnalysis(prompt) },
+      { name: 'Mistral', fn: () => this.tryMistralAnalysis(prompt) },
+      { name: 'Cohere', fn: () => this.tryCohereAnalysis(prompt) }
     ];
 
     for (const provider of providers) {
       try {
-        const result = await provider();
-        if (result) return result;
+        console.log(`Trying ${provider.name} AI provider...`);
+        const result = await provider.fn();
+        if (result) {
+          console.log(`${provider.name} AI analysis successful!`);
+          return result;
+        }
+        console.log(`${provider.name} returned null result`);
       } catch (error) {
+        console.log(`${provider.name} AI provider failed:`, error.message);
         continue; // Try next provider
       }
     }
     
+    console.log('All AI providers failed');
     return null; // All AI providers failed
   }
 
   async tryGeminiAnalysis(prompt) {
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        contents: [{ parts: [{ text: prompt }] }]
-      },
-      {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 15000
-      }
-    );
+    try {
+      console.log('Making Gemini API call...');
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          contents: [{ parts: [{ text: prompt }] }]
+        },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 15000
+        }
+      );
 
-    const aiResponse = response.data.candidates[0].content.parts[0].text;
-    return this.parseAIAnalysis(aiResponse);
+      console.log('Gemini API response received');
+      const aiResponse = response.data.candidates[0].content.parts[0].text;
+      console.log('AI Response:', aiResponse.substring(0, 200) + '...');
+      
+      const parsed = this.parseAIAnalysis(aiResponse);
+      console.log('Parsed result:', parsed ? 'Success' : 'Failed');
+      return parsed;
+    } catch (error) {
+      console.log('Gemini API error:', error.response?.data || error.message);
+      throw error;
+    }
   }
 
   async tryOpenRouterAnalysis(prompt) {
@@ -477,34 +501,38 @@ Respond in JSON format:
       blockingIssues.push('SENIORITY_MISMATCH');
     }
     
-    // Apply BRUTAL scoring for unqualified candidates
+    // Apply realistic scoring - only major blockers get very low scores
     if (blockingIssues.length > 0) {
-      // If basic eligibility is not met, skills are irrelevant
+      // Major experience gaps (only for senior roles requiring 5+ years)
       if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT')) {
-        finalScore = Math.min(finalScore, 15); // BRUTAL cap for experience issues
-        verdict = 'COMPLETELY_UNQUALIFIED';
+        if (experienceText.includes('zero experience') || experienceText.includes('no relevant experience')) {
+          finalScore = Math.min(finalScore, 25); // Major blocker
+          verdict = 'COMPLETELY_UNQUALIFIED';
+        } else {
+          finalScore = Math.min(finalScore, 55); // Minor experience gap
+          verdict = 'UNDERQUALIFIED';
+        }
       }
       
+      // Education requirements (only if absolutely required)
       if (blockingIssues.includes('EDUCATION_INSUFFICIENT')) {
-        finalScore = Math.min(finalScore, 20); // BRUTAL cap for education issues
-        verdict = 'COMPLETELY_UNQUALIFIED';
+        if (educationText.includes('required degree') && educationText.includes('none')) {
+          finalScore = Math.min(finalScore, 35); // Major blocker
+          verdict = 'UNDERQUALIFIED';
+        }
       }
       
+      // Seniority mismatch (only for major gaps like junior->senior)
       if (blockingIssues.includes('SENIORITY_MISMATCH')) {
-        finalScore = Math.min(finalScore, 18); // BRUTAL cap for seniority issues
-        verdict = 'COMPLETELY_UNQUALIFIED';
+        if (seniorityText.includes('junior') && seniorityText.includes('senior')) {
+          finalScore = Math.min(finalScore, 45); // Significant gap
+          verdict = 'UNDERQUALIFIED';
+        }
       }
       
-      // Multiple blocking issues = almost zero score
-      if (blockingIssues.length >= 2) {
-        finalScore = Math.min(finalScore, 8); // BRUTAL - almost zero
-        verdict = 'COMPLETELY_UNQUALIFIED';
-      }
-      
-      // Special case: No experience mentioned at all for experienced role
-      if (experienceText.includes('no experience') || experienceText.includes('zero experience') || 
-          experienceText.includes('completely lacks')) {
-        finalScore = Math.min(finalScore, 5); // BRUTAL - almost zero
+      // Multiple major issues
+      if (blockingIssues.length >= 2 && finalScore < 30) {
+        finalScore = Math.min(finalScore, 20);
         verdict = 'COMPLETELY_UNQUALIFIED';
       }
     }
@@ -518,7 +546,8 @@ Respond in JSON format:
       finalScore,
       experienceGap: parsed.experienceGap,
       educationGap: parsed.educationGap,
-      seniorityMismatch: parsed.seniorityMismatch
+      seniorityMismatch: parsed.seniorityMismatch,
+      aiSummary: parsed.summary
     });
     
     return {
@@ -528,8 +557,9 @@ Respond in JSON format:
       experienceGap: parsed.experienceGap || 'No experience analysis available',
       educationGap: parsed.educationGap || 'No education analysis available', 
       seniorityMismatch: parsed.seniorityMismatch || 'No seniority analysis available',
-      recommendations: this.generateIntelligentRecommendations(blockingIssues, skillsGap, finalScore),
-      summary: breakdown.summary,
+      recommendations: parsed.recommendations && parsed.recommendations.length > 0 ? 
+        parsed.recommendations : this.generateIntelligentRecommendations(blockingIssues, skillsGap, finalScore),
+      summary: parsed.summary || breakdown.summary,
       verdict,
       blockingIssues,
       breakdown,
@@ -538,7 +568,7 @@ Respond in JSON format:
     };
   }
 
-  generateIntelligentBreakdown({skillsMatch, skillsGap, blockingIssues, originalScore, finalScore, experienceGap, educationGap, seniorityMismatch}) {
+  generateIntelligentBreakdown({skillsMatch, skillsGap, blockingIssues, originalScore, finalScore, experienceGap, educationGap, seniorityMismatch, aiSummary}) {
     const breakdown = {
       eligibilityScore: 0,
       skillScore: 0,
@@ -547,14 +577,27 @@ Respond in JSON format:
       summary: ''
     };
     
-    // Calculate eligibility score (experience + education + seniority)
-    if (blockingIssues.length === 0) {
-      breakdown.eligibilityScore = 85; // Good eligibility
-    } else if (blockingIssues.length === 1) {
-      breakdown.eligibilityScore = 40; // Some eligibility issues
-    } else {
-      breakdown.eligibilityScore = 15; // Major eligibility issues
+    // Calculate realistic eligibility score
+    let eligibilityScore = 75; // Start with decent eligibility
+    
+    // Only major blockers significantly reduce eligibility
+    if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT')) {
+      if (experienceGap && experienceGap.toLowerCase().includes('zero experience')) {
+        eligibilityScore = Math.min(eligibilityScore, 25); // Major blocker
+      } else {
+        eligibilityScore = Math.min(eligibilityScore, 55); // Minor gap
+      }
     }
+    
+    if (blockingIssues.includes('EDUCATION_INSUFFICIENT')) {
+      eligibilityScore = Math.min(eligibilityScore, 50); // Moderate impact
+    }
+    
+    if (blockingIssues.includes('SENIORITY_MISMATCH')) {
+      eligibilityScore = Math.min(eligibilityScore, 60); // Minor impact
+    }
+    
+    breakdown.eligibilityScore = eligibilityScore;
     
     // Calculate skill score
     const totalSkills = skillsMatch.length + skillsGap.length;
@@ -571,14 +614,14 @@ Respond in JSON format:
       breakdown.primaryConcerns.push('Seniority level inappropriate for this position');
     }
     
-    // Generate BRUTAL summary
-    if (blockingIssues.length === 0) {
-      breakdown.summary = `✅ Meets basic eligibility. Skills: ${breakdown.skillScore}%. Qualified candidate.`;
-    } else if (blockingIssues.length === 1) {
-      breakdown.summary = `❌ ${breakdown.primaryConcerns[0]}. DO NOT APPLY to this role.`;
-    } else {
-      breakdown.summary = `❌ COMPLETELY UNQUALIFIED: ${breakdown.primaryConcerns.join(', ').toLowerCase()}. Immediate rejection.`;
-    }
+    // Use AI's actual summary if available, otherwise generate based on analysis
+    breakdown.summary = aiSummary || (
+      blockingIssues.length === 0 ? 
+        `✅ Meets basic eligibility. Skills: ${breakdown.skillScore}%. Qualified candidate.` :
+      blockingIssues.length === 1 ? 
+        `❌ ${breakdown.primaryConcerns[0]}. DO NOT APPLY to this role.` :
+        `❌ COMPLETELY UNQUALIFIED: ${breakdown.primaryConcerns.join(', ').toLowerCase()}. Immediate rejection.`
+    );
     
     return breakdown;
   }
@@ -586,41 +629,38 @@ Respond in JSON format:
   generateIntelligentRecommendations(blockingIssues, skillsGap, finalScore) {
     const recommendations = [];
     
-    // BRUTAL recommendations based on blocking issues
-    if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT')) {
-      recommendations.push('🚫 DO NOT APPLY: You lack the required work experience');
-      recommendations.push('💡 REALITY CHECK: Gain 3-5 years experience in junior roles first');
-    }
-    
-    if (blockingIssues.includes('EDUCATION_INSUFFICIENT')) {
-      recommendations.push('🚫 DO NOT APPLY: Education requirements not met');
-      recommendations.push('💡 REALITY CHECK: Complete required degree/certification first');
-    }
-    
-    if (blockingIssues.includes('SENIORITY_MISMATCH')) {
-      recommendations.push('🚫 DO NOT APPLY: This is a senior role, you are junior level');
-      recommendations.push('💡 REALITY CHECK: Apply to junior/mid-level positions instead');
-    }
-    
-    // Overall BRUTAL guidance
-    if (finalScore < 20) {
-      recommendations.push('🚫 BRUTAL TRUTH: You are completely unqualified for this role');
-      recommendations.push('💡 HONEST ADVICE: Do not waste time applying - focus on building basics');
-    } else if (finalScore < 40) {
-      recommendations.push('🚫 BRUTAL TRUTH: You are significantly underqualified');
-      recommendations.push('💡 HONEST ADVICE: Need 2-3 years more preparation before applying');
-    }
-    
-    // Skills are secondary when unqualified
-    if (blockingIssues.length > 0 && skillsGap.length > 0) {
-      recommendations.push(`📚 Secondary priority: Learn ${skillsGap.slice(0, 2).join(', ')} while gaining experience`);
+    // Realistic recommendations based on score
+    if (finalScore >= 70) {
+      recommendations.push('✅ Strong candidate - prepare for interviews and highlight matching skills');
+      if (skillsGap.length > 0) {
+        recommendations.push(`📚 Consider learning ${skillsGap.slice(0, 2).join(', ')} to become even stronger`);
+      }
+    } else if (finalScore >= 50) {
+      recommendations.push('📊 Good potential - address key gaps to improve your chances');
+      if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT')) {
+        recommendations.push('💼 Highlight relevant projects and transferable experience');
+      }
+      if (skillsGap.length > 0) {
+        recommendations.push(`📚 Focus on learning ${skillsGap.slice(0, 2).join(', ')} before applying`);
+      }
+    } else if (finalScore >= 30) {
+      recommendations.push('⚠️ Significant gaps - consider similar but more junior roles');
+      if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT')) {
+        recommendations.push('💼 Gain 1-2 years more experience in related roles first');
+      }
+      if (blockingIssues.includes('SENIORITY_MISMATCH')) {
+        recommendations.push('📈 Look for mid-level positions that match your experience');
+      }
+    } else {
+      recommendations.push('❌ Major gaps - focus on building core qualifications first');
+      recommendations.push('📚 Build foundational skills and gain relevant experience');
     }
     
     return recommendations;
   }
 
   // Fallback analysis if all AI providers fail
-  getFallbackAnalysis(resumeText, jobDescription) {
+  async getFallbackAnalysis(resumeText, jobDescription) {
     const resumeSkills = this.extractSkills(resumeText);
     const jdSkills = this.extractSkills(jobDescription);
     
@@ -654,12 +694,14 @@ Respond in JSON format:
       improvements: skillsGap.slice(0, 5)
     };
 
+    const atsAnalysis = await atsService.checkATSCompatibility(resumeText, jobDescription);
+
     return {
       analysis,
       aiReport: 'AI analysis temporarily unavailable. Using basic skill matching.',
       fallbackReport: this.generateFallbackReport(analysis),
       aiProvider: 'Fallback Algorithm',
-      atsAnalysis: null
+      atsAnalysis
     };
   }
 

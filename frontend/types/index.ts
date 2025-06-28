@@ -12,6 +12,18 @@ export interface Analysis {
   summary: string;
   strengths: string[];
   improvements: string[];
+  verdict?: string;
+  breakdown?: {
+    eligibilityScore: number;
+    skillScore: number;
+    overallScore: number;
+    primaryConcerns: string[];
+    summary: string;
+  };
+  experienceGap?: string;
+  educationGap?: string;
+  seniorityMismatch?: string;
+  blockingIssues?: string[];
 }
 
 export interface AnalysisResult {
