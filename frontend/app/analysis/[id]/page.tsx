@@ -100,7 +100,7 @@ export default function AnalysisDetailPage() {
                 skillScore={analysis.analysis.breakdown.skillScore}
                 skillsMatch={analysis.analysis.skillsMatch.length}
                 skillsGap={analysis.analysis.skillsGap.length}
-                verdict={analysis.analysis.verdict || 'UNKNOWN'}
+                verdict={analysis.analysis.verdict || 'QUALIFIED'}
               />
             ) : (
               <div className="mb-8">

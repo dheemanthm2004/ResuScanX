@@ -107,20 +107,44 @@ Provide a DETAILED, COMPREHENSIVE analysis covering:
 
 Total response should be 1000+ words. Be detailed, specific, and reference actual content from the resume and job description.`;
 
-    const reports = await Promise.allSettled([
-      this.tryDetailedOpenRouter(detailedPrompt),
-      this.tryDetailedMistral(detailedPrompt),
-      this.tryDetailedCohere(detailedPrompt),
-      this.tryDetailedGemini(detailedPrompt)
-    ]);
+    // Use only Gemini for detailed reports (most reliable)
+    console.log('Generating detailed report with Gemini...');
+    try {
+      const aiReport = await this.tryDetailedGemini(detailedPrompt);
+      if (aiReport) {
+        console.log('Gemini detailed report successful!');
+        return {
+          aiReport,
+          fallbackReport: this.generateFallbackReport(analysis),
+          aiProvider: 'Gemini AI Analysis'
+        };
+      }
+    } catch (error) {
+      console.log('Gemini detailed report failed:', error.message);
+    }
+    
+    // Only try OpenRouter as backup for detailed reports
+    try {
+      console.log('Trying OpenRouter for detailed report...');
+      const aiReport = await this.tryDetailedOpenRouter(detailedPrompt);
+      if (aiReport) {
+        console.log('OpenRouter detailed report successful!');
+        return {
+          aiReport,
+          fallbackReport: this.generateFallbackReport(analysis),
+          aiProvider: 'OpenRouter AI Analysis'
+        };
+      }
+    } catch (error) {
+      console.log('OpenRouter detailed report failed:', error.message);
+    }
 
-    const aiReport = reports.find(r => r.status === 'fulfilled')?.value;
-    const fallbackReport = this.generateFallbackReport(analysis);
-
+    // All AI providers failed
+    console.log('All AI providers failed for detailed report');
     return {
-      aiReport: aiReport || '🤖 AI analysis temporarily unavailable - all providers failed',
-      fallbackReport,
-      aiProvider: aiReport ? 'Multi-AI Detailed Analysis' : 'Intelligent Fallback'
+      aiReport: '🤖 AI analysis temporarily unavailable - all providers failed',
+      fallbackReport: this.generateFallbackReport(analysis),
+      aiProvider: 'Intelligent Fallback'
     };
   }
 
@@ -295,7 +319,7 @@ ${analysis.recommendations.map(rec => `• ${rec}`).join('\n')}
 
   // AI-powered comprehensive analysis using multiple providers
   async getComprehensiveAIAnalysis(resumeText, jobDescription) {
-    console.log('Starting AI analysis...');
+    console.log('Starting AI analysis with 4 providers...');
     const prompt = `You are an experienced HR recruiter analyzing resume-job fit. Be realistic - no resume is 100% perfect match.
 
 RESUME:
@@ -336,26 +360,35 @@ Respond in JSON format:
   "verdict": "QUALIFIED/UNDERQUALIFIED/COMPLETELY_UNQUALIFIED"
 }`;
 
-    // Try multiple AI providers for best results
-    const providers = [
-      { name: 'Gemini', fn: () => this.tryGeminiAnalysis(prompt) },
+    // Use Gemini as primary, others as fallback only
+    try {
+      console.log('Using Gemini AI for analysis...');
+      const result = await this.tryGeminiAnalysis(prompt);
+      if (result) {
+        console.log('Gemini analysis successful!');
+        return result;
+      }
+    } catch (error) {
+      console.log('Gemini failed, trying fallback providers...');
+    }
+    
+    // Only use other providers if Gemini fails
+    const fallbackProviders = [
       { name: 'OpenRouter', fn: () => this.tryOpenRouterAnalysis(prompt) },
-      { name: 'Mistral', fn: () => this.tryMistralAnalysis(prompt) },
-      { name: 'Cohere', fn: () => this.tryCohereAnalysis(prompt) }
+      { name: 'Mistral', fn: () => this.tryMistralAnalysis(prompt) }
     ];
 
-    for (const provider of providers) {
+    for (const provider of fallbackProviders) {
       try {
-        console.log(`Trying ${provider.name} AI provider...`);
+        console.log(`Trying fallback ${provider.name}...`);
         const result = await provider.fn();
         if (result) {
-          console.log(`${provider.name} AI analysis successful!`);
+          console.log(`${provider.name} fallback successful!`);
           return result;
         }
-        console.log(`${provider.name} returned null result`);
       } catch (error) {
-        console.log(`${provider.name} AI provider failed:`, error.message);
-        continue; // Try next provider
+        console.log(`${provider.name} fallback failed:`, error.message);
+        continue;
       }
     }
     
@@ -501,37 +534,27 @@ Respond in JSON format:
       blockingIssues.push('SENIORITY_MISMATCH');
     }
     
-    // Apply realistic scoring - only major blockers get very low scores
+    // Use AI's verdict primarily, only override for major issues
+    if (parsed.verdict && parsed.verdict !== 'UNKNOWN') {
+      verdict = parsed.verdict;
+    } else {
+      // Determine verdict based on final score
+      if (finalScore >= 70) {
+        verdict = 'QUALIFIED';
+      } else if (finalScore >= 40) {
+        verdict = 'UNDERQUALIFIED';
+      } else {
+        verdict = 'COMPLETELY_UNQUALIFIED';
+      }
+    }
+    
+    // Only override AI verdict for extreme cases
     if (blockingIssues.length > 0) {
-      // Major experience gaps (only for senior roles requiring 5+ years)
-      if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT')) {
-        if (experienceText.includes('zero experience') || experienceText.includes('no relevant experience')) {
-          finalScore = Math.min(finalScore, 25); // Major blocker
-          verdict = 'COMPLETELY_UNQUALIFIED';
-        } else {
-          finalScore = Math.min(finalScore, 55); // Minor experience gap
-          verdict = 'UNDERQUALIFIED';
-        }
-      }
-      
-      // Education requirements (only if absolutely required)
-      if (blockingIssues.includes('EDUCATION_INSUFFICIENT')) {
-        if (educationText.includes('required degree') && educationText.includes('none')) {
-          finalScore = Math.min(finalScore, 35); // Major blocker
-          verdict = 'UNDERQUALIFIED';
-        }
-      }
-      
-      // Seniority mismatch (only for major gaps like junior->senior)
-      if (blockingIssues.includes('SENIORITY_MISMATCH')) {
-        if (seniorityText.includes('junior') && seniorityText.includes('senior')) {
-          finalScore = Math.min(finalScore, 45); // Significant gap
-          verdict = 'UNDERQUALIFIED';
-        }
-      }
-      
-      // Multiple major issues
-      if (blockingIssues.length >= 2 && finalScore < 30) {
+      if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT') && 
+          experienceText.includes('zero experience')) {
+        finalScore = Math.min(finalScore, 25);
+        verdict = 'COMPLETELY_UNQUALIFIED';
+      } else if (blockingIssues.length >= 2 && finalScore < 30) {
         finalScore = Math.min(finalScore, 20);
         verdict = 'COMPLETELY_UNQUALIFIED';
       }
