@@ -1,20 +1,20 @@
 const axios = require('axios');
 
 class ATSService {
-  // Real AI-powered ATS analysis
+  // AI-powered ATS compatibility analysis
   async checkATSCompatibility(resumeText, jobDescription = '') {
     try {
       // Use AI to analyze ATS compatibility
       const aiAnalysis = await this.getAIATSAnalysis(resumeText, jobDescription);
       
-      // Combine AI analysis with basic technical checks
+      // Combine AI analysis with technical checks for better accuracy
       const technicalChecks = this.performTechnicalChecks(resumeText);
       
       return {
-        atsScore: aiAnalysis.score || technicalChecks.score,
+        atsScore: aiAnalysis.score || technicalChecks.atsScore,
         issues: [...(aiAnalysis.issues || []), ...technicalChecks.issues],
         recommendations: [...(aiAnalysis.recommendations || []), ...technicalChecks.recommendations],
-        summary: aiAnalysis.summary || this.generateATSSummary(technicalChecks.score, technicalChecks.issues.length),
+        summary: aiAnalysis.summary || technicalChecks.summary,
         aiPowered: !!aiAnalysis.score
       };
     } catch (error) {
@@ -29,57 +29,100 @@ class ATSService {
   }
 
   async getAIATSAnalysis(resumeText, jobDescription) {
-    const prompt = `You are an ATS (Applicant Tracking System) expert. Analyze this resume for ATS compatibility:
+    const prompt = `You are an ATS (Applicant Tracking System) parsing expert with 10+ years experience. Analyze this resume like a REAL ATS system would.
 
-RESUME TEXT:
-${resumeText.substring(0, 2500)}
+RESUME CONTENT:
+${resumeText.substring(0, 3000)}
 
-${jobDescription ? `JOB DESCRIPTION:
-${jobDescription.substring(0, 800)}
+${jobDescription ? `TARGET JOB:
+${jobDescription.substring(0, 1000)}
 
-` : ''}ANALYSIS REQUIREMENTS:
-1. ATS compatibility score (0-100) - be realistic
-2. Specific formatting/parsing issues that ATS systems struggle with
-3. Missing keywords or standard sections
-4. Actionable recommendations for improvement
+` : ''}CRITICAL ATS ANALYSIS - BE BRUTALLY HONEST:
 
-COMMON ATS ISSUES TO CHECK:
-- Non-standard fonts or formatting
-- Missing contact information
-- Lack of standard section headers
-- Complex layouts, tables, graphics
-- Missing relevant keywords
-- Poor file format compatibility
-- Inconsistent date formats
+1. PARSING ABILITY (40% of score):
+   - Can ATS extract contact info cleanly?
+   - Are section headers standard and recognizable?
+   - Is text readable without complex formatting?
+   - Are dates in parseable format?
 
-Respond in JSON format:
+2. KEYWORD MATCHING (35% of score):
+   - Does resume contain job-relevant keywords?
+   - Are skills mentioned in standard terminology?
+   - Are job titles using industry-standard names?
+   - Is there keyword stuffing (penalty)?
+
+3. STRUCTURE & FORMAT (25% of score):
+   - Standard resume sections present?
+   - Logical flow and organization?
+   - No graphics/tables that break parsing?
+   - Consistent formatting throughout?
+
+REAL ATS BEHAVIOR:
+- ATS systems FAIL to parse 75% of resumes properly
+- Complex formatting = automatic rejection
+- Missing keywords = filtered out immediately
+- Non-standard sections = parsing errors
+
+BE REALISTIC: Most resumes score 40-60% in real ATS systems.
+
+Respond in JSON:
 {
-  "score": number (0-100),
-  "issues": ["specific issue 1", "specific issue 2"],
-  "recommendations": ["actionable rec 1", "actionable rec 2"],
-  "summary": "brief honest summary of ATS compatibility"
+  "score": number (20-90, be realistic - most should be 40-70),
+  "issues": ["specific parsing problems ATS would have"],
+  "recommendations": ["exact fixes to pass ATS parsing"],
+  "summary": "honest assessment of ATS parsing likelihood",
+  "keywordMatch": number (0-100),
+  "parseability": number (0-100)
 }`;
 
-    // Try multiple AI providers for better accuracy
-    const providers = [
-      () => this.tryGeminiATS(prompt),
-      () => this.tryOpenRouterATS(prompt),
-      () => this.tryMistralATS(prompt)
-    ];
-
-    for (const provider of providers) {
-      try {
-        const result = await provider();
-        if (result && result.score !== undefined) {
-          return result;
-        }
-      } catch (error) {
-        console.log('ATS AI provider failed:', error.message);
-        continue;
+    // Use Gemini first (best for detailed analysis)
+    try {
+      console.log('Using Gemini for intelligent ATS analysis...');
+      const result = await this.tryGeminiATS(prompt);
+      if (result && result.score !== undefined) {
+        console.log('Gemini ATS analysis successful!');
+        return this.validateATSResult(result);
       }
+    } catch (error) {
+      console.log('Gemini ATS failed:', error.message);
+    }
+
+    // Fallback to OpenRouter
+    try {
+      console.log('Trying OpenRouter for ATS analysis...');
+      const result = await this.tryOpenRouterATS(prompt);
+      if (result && result.score !== undefined) {
+        console.log('OpenRouter ATS analysis successful!');
+        return this.validateATSResult(result);
+      }
+    } catch (error) {
+      console.log('OpenRouter ATS failed:', error.message);
     }
     
-    throw new Error('All AI providers failed');
+    throw new Error('AI ATS analysis failed');
+  }
+
+  validateATSResult(result) {
+    // Ensure realistic scoring
+    let score = Math.min(Math.max(result.score || 50, 20), 90);
+    
+    // Apply realistic constraints
+    if (score > 80 && (!result.issues || result.issues.length === 0)) {
+      score = Math.min(score, 75); // Perfect scores are rare
+    }
+    
+    if (score < 30 && result.issues && result.issues.length < 3) {
+      score = Math.max(score, 35); // Very low scores need multiple issues
+    }
+    
+    return {
+      score,
+      issues: result.issues || [],
+      recommendations: result.recommendations || [],
+      summary: result.summary || this.generateATSSummary(score, result.issues?.length || 0),
+      keywordMatch: result.keywordMatch || Math.max(score - 20, 0),
+      parseability: result.parseability || Math.max(score - 10, 0)
+    };
   }
 
   async tryGeminiATS(prompt) {
@@ -140,6 +183,27 @@ Respond in JSON format:
     return this.parseATSResponse(response.data.choices[0].message.content);
   }
 
+  async tryCohereATS(prompt) {
+    const response = await axios.post(
+      'https://api.cohere.ai/v1/generate',
+      {
+        model: 'command-light',
+        prompt: prompt,
+        max_tokens: 500,
+        temperature: 0.3
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.COHERE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000
+      }
+    );
+    
+    return this.parseATSResponse(response.data.generations[0].text);
+  }
+
   parseATSResponse(response) {
     try {
       // Try to parse as JSON first
@@ -147,7 +211,7 @@ Respond in JSON format:
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         return {
-          score: parsed.score || 0,
+          score: Math.min(Math.max(parsed.score || 0, 0), 100),
           issues: Array.isArray(parsed.issues) ? parsed.issues : [],
           recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
           summary: parsed.summary || 'ATS analysis completed'
@@ -178,89 +242,107 @@ Respond in JSON format:
     return { score, issues, recommendations, summary };
   }
 
-  // Comprehensive technical checks as fallback
+
+
+  // Realistic ATS technical validation
   performTechnicalChecks(resumeText) {
     const issues = [];
     const recommendations = [];
-    let score = 100;
+    let score = 65; // Start with realistic baseline
 
-    // Contact Information Checks
-    if (!/@/.test(resumeText)) {
-      issues.push('No email address detected');
-      recommendations.push('Include a professional email address at the top');
+    // CRITICAL: Contact Information (ATS must find this)
+    const hasEmail = /@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(resumeText);
+    const hasPhone = /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/.test(resumeText);
+    
+    if (!hasEmail) {
+      issues.push('ATS cannot locate email address - will be rejected');
+      recommendations.push('Add email in clear format: john.doe@email.com');
+      score -= 25;
+    }
+    
+    if (!hasPhone) {
+      issues.push('Phone number not in ATS-readable format');
+      recommendations.push('Add phone: (555) 123-4567 or 555-123-4567');
       score -= 15;
     }
 
-    if (!/\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/.test(resumeText)) {
-      issues.push('No phone number detected');
-      recommendations.push('Include a phone number in standard format');
-      score -= 10;
-    }
-
-    // Content Length and Structure
-    if (resumeText.length < 500) {
-      issues.push('Resume content appears too brief for ATS parsing');
-      recommendations.push('Expand resume content with more detailed descriptions');
-      score -= 20;
-    }
-
-    // Standard Sections Check
-    const requiredSections = ['experience', 'education', 'skills'];
-    const missingSections = requiredSections.filter(section => 
-      !new RegExp(`\\b${section}\\b`, 'i').test(resumeText)
-    );
+    // CRITICAL: Standard Section Headers
+    const standardSections = {
+      'experience': /\b(experience|employment|work history|professional experience)\b/i,
+      'education': /\b(education|academic|degree|university|college)\b/i,
+      'skills': /\b(skills|technical skills|competencies|proficiencies)\b/i
+    };
     
-    if (missingSections.length > 0) {
-      issues.push(`Missing standard sections: ${missingSections.join(', ')}`);
-      recommendations.push('Include standard resume sections with clear headers');
-      score -= missingSections.length * 15;
-    }
+    Object.entries(standardSections).forEach(([section, regex]) => {
+      if (!regex.test(resumeText)) {
+        issues.push(`Missing "${section.toUpperCase()}" section header - ATS will not categorize content`);
+        recommendations.push(`Add clear section header: "${section.toUpperCase()}"`);
+        score -= 12;
+      }
+    });
 
-    // Formatting Issues
-    if (resumeText.includes('\t') || resumeText.match(/\s{4,}/)) {
-      issues.push('Inconsistent spacing detected');
-      recommendations.push('Use consistent spacing and avoid excessive tabs');
-      score -= 5;
-    }
-
-    // Date Format Check
-    if (!/\b(19|20)\d{2}\b/.test(resumeText) && !/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/.test(resumeText)) {
-      issues.push('No clear date formats found');
-      recommendations.push('Include dates in standard format (MM/YYYY or Month YYYY)');
-      score -= 10;
-    }
-
-    // Keywords Density Check
-    const commonKeywords = ['manage', 'develop', 'create', 'implement', 'analyze', 'design', 'lead', 'coordinate'];
-    const keywordCount = commonKeywords.filter(keyword => 
-      new RegExp(`\\b${keyword}`, 'i').test(resumeText)
-    ).length;
+    // PARSING KILLERS: Complex formatting indicators
+    const complexFormatting = [
+      { pattern: /\|{2,}/, issue: 'Table formatting detected', penalty: 15 },
+      { pattern: /_{5,}/, issue: 'Underline formatting detected', penalty: 10 },
+      { pattern: /\*{3,}/, issue: 'Asterisk formatting detected', penalty: 8 },
+      { pattern: /={3,}/, issue: 'Equals sign formatting detected', penalty: 8 }
+    ];
     
-    if (keywordCount < 3) {
-      issues.push('Limited action keywords detected');
-      recommendations.push('Include more action verbs and industry keywords');
-      score -= 10;
+    complexFormatting.forEach(({ pattern, issue, penalty }) => {
+      if (pattern.test(resumeText)) {
+        issues.push(`${issue} - ATS parsing will fail`);
+        recommendations.push('Remove complex formatting, use simple text');
+        score -= penalty;
+      }
+    });
+
+    // KEYWORD DENSITY: Too few = filtered out
+    const actionVerbs = ['managed', 'developed', 'created', 'implemented', 'analyzed', 'designed', 'led', 'coordinated', 'built', 'improved'];
+    const verbCount = actionVerbs.filter(verb => new RegExp(`\\b${verb}`, 'i').test(resumeText)).length;
+    
+    if (verbCount < 3) {
+      issues.push('Insufficient action verbs - ATS keyword matching will fail');
+      recommendations.push('Add action verbs: managed, developed, implemented, etc.');
+      score -= 12;
+    }
+
+    // DATE FORMAT: ATS struggles with non-standard dates
+    const hasStandardDates = /\b(0[1-9]|1[0-2])\/(19|20)\d{2}\b/.test(resumeText) || 
+                            /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(19|20)\d{2}\b/i.test(resumeText);
+    
+    if (!hasStandardDates && resumeText.length > 500) {
+      issues.push('Non-standard date formats detected');
+      recommendations.push('Use MM/YYYY or "Jan 2023" format for dates');
+      score -= 8;
+    }
+
+    // CONTENT LENGTH: Too short = insufficient data
+    if (resumeText.length < 800) {
+      issues.push('Resume too brief - ATS needs more content to parse effectively');
+      recommendations.push('Expand descriptions with specific achievements and metrics');
+      score -= 15;
     }
 
     return {
-      atsScore: Math.max(score, 0),
+      atsScore: Math.max(Math.min(score, 85), 15), // Realistic range
       issues,
       recommendations,
-      summary: this.generateATSSummary(Math.max(score, 0), issues.length)
+      summary: this.generateATSSummary(Math.max(Math.min(score, 85), 15), issues.length)
     };
   }
 
 
 
   generateATSSummary(score, issueCount) {
-    if (score >= 85) {
-      return `🟢 Excellent ATS compatibility! Your resume should pass through most ATS systems without issues.`;
-    } else if (score >= 70) {
-      return `🟡 Good ATS compatibility. ${issueCount} minor improvements recommended for optimal parsing.`;
-    } else if (score >= 50) {
-      return `🟠 Moderate ATS compatibility. ${issueCount} issues detected that may cause parsing problems.`;
+    if (score >= 75) {
+      return `🟢 Strong ATS compatibility (${score}%). Your resume should parse well in most ATS systems. ${issueCount} minor optimizations available.`;
+    } else if (score >= 60) {
+      return `🟡 Moderate ATS compatibility (${score}%). ${issueCount} issues may cause parsing problems in some ATS systems.`;
+    } else if (score >= 40) {
+      return `🟠 Poor ATS compatibility (${score}%). ${issueCount} critical issues will likely cause parsing failures.`;
     } else {
-      return `🔴 Poor ATS compatibility. ${issueCount} critical issues need immediate attention to avoid rejection.`;
+      return `🔴 Very poor ATS compatibility (${score}%). ${issueCount} major issues will cause automatic rejection by most ATS systems.`;
     }
   }
 

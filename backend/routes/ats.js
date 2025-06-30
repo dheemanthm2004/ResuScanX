@@ -34,14 +34,14 @@ router.post('/check', upload.single('resume'), async (req, res) => {
     // Clean up uploaded file
     fs.unlinkSync(req.file.path);
 
-    // Run AI-powered ATS analysis
+    // Run technical ATS compatibility analysis
     const atsAnalysis = await atsService.checkATSCompatibility(resumeText);
     const atsTips = atsService.getATSTips();
 
     res.json({
       atsAnalysis,
       atsTips,
-      message: 'ATS analysis completed successfully'
+      message: 'ATS compatibility check completed'
     });
 
   } catch (error) {
