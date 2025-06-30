@@ -1,132 +1,212 @@
 
-# ResuScanX
+# 🧠 ResuScanX
 
-**AI-Powered Resume Analysis vs Job Description**
+**AI-Powered Resume vs Job Description Analyzer + ATS Compatibility Checker**
 
-ResuScanX evaluates how well a candidate’s resume aligns with any job description using advanced NLP, AI reasoning, and ATS compliance checks. It’s designed to offer honest, structured feedback to help users target roles they are actually qualified for.
+[![Live Demo](https://img.shields.io/badge/Live_App-Vercel-000?style=for-the-badge&logo=vercel)](https://resuscanx.vercel.app)
+[![API](https://img.shields.io/badge/API-Render-0A66C2?style=for-the-badge&logo=render)](https://resuscanx.onrender.com)
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Click_Here-blue?style=for-the-badge)](https://resuscanx.vercel.app)
-
----
-
-## 🔍 Features
-
-- **Resume vs JD Matching** – Upload your resume and paste a job description to get a match score.
-- **AI Scoring Engine** – Experience, skills, education, and seniority are evaluated before giving a verdict.
-- **ATS Compatibility Checker** – Fast, login-free scan to check if resumes will pass common ATS filters.
-- **Detailed AI Feedback** – 1000+ word report using Google Gemini and fallbacks (OpenRouter, Mistral).
-- **AI Career Coach** – Ask questions based on your resume analysis and get job-specific answers.
+<p align="center">
+  <img src="https://i.ibb.co/0y7QkrBJ/image.png" alt="ResuScanX Homepage Preview" width="800"/>
+</p>
 
 ---
 
-## ⚙️ Tech Stack
+## 📌 Overview
 
-### Frontend
-- Next.js(TypeScript)
-- Tailwind CSS
-- Chart.js, React Hook Form
-
-### Backend
-- Node.js + Express
-- MongoDB (Mongoose)
-- Multer (PDF upload), JWT Auth
-
-### AI + NLP
-- Google Gemini (primary)
-- OpenRouter, Mistral AI (fallbacks)
-- `natural`, `compromise` (NLP skills extraction)
+**ResuScanX** is a smart web application that empowers job seekers by comparing their resume to any job description using **AI**, **NLP**, and **ATS simulation**. It delivers a realistic match score, identifies skill gaps, and gives actionable improvement tips — helping users improve their chances of getting shortlisted.
 
 ---
 
-## 🛠 Setup Instructions
+## ✨ Core Features
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/dheemanthm2004/ResuScanX.git
-cd ResuScanX
+### 🧠 Resume vs JD Analyzer
+- Upload a **PDF resume** and paste a **job description**
+- AI computes a **match score**, skill fit, and missing areas
+- Factors in **experience**, **education**, **seniority** gaps
+
+### 📊 Skill Intelligence & Visual Analytics
+- **NLP-based** skill extraction
+- Interactive charts showing match/gap breakdown
+- AI-powered **recommendations** for next steps
+
+### ✅ ATS Compatibility Checker *(Public Tool)*
+- Simulates how ATS parses your resume
+- Checks for formatting, keyword, structure issues
+- Generates **ATS score**, flags, and formatting suggestions
+
+### 💬 AI Career Assistant
+- Context-aware chat about your analysis
+- Personalized **interview prep**, **skill advice**, and **resume tips**
+
+### 📈 Authenticated Dashboard
+- View resume analysis **history**
+- Revisit and export full reports
+- Built-in session management with JWT auth
+
+---
+
+## 🛠 Tech Stack
+
+| Layer     | Stack                                    |
+|-----------|------------------------------------------|
+| Frontend  | Next.js 14 (App Router), TypeScript, Tailwind CSS |
+| Backend   | Node.js, Express.js, MongoDB, Mongoose, JWT        |
+| AI/NLP    | Gemini API, OpenRouter, Mistral, Cohere, `natural`, `compromise` |
+| Parsing   | `pdf-parse`, `multer` for file handling   |
+| Charts    | Chart.js + react-chartjs-2               |
+| Auth      | JWT + bcryptjs                           |
+| Hosting   | Vercel (frontend), Render (backend), MongoDB Atlas |
+
+---
+
+## 🧾 Project Structure
+
+```
+
+resuscanx/
+├── backend/
+│   ├── routes/       → auth, ats, analysis, chat
+│   ├── models/       → User, Analysis schemas
+│   ├── services/     → aiService.js, atsService.js
+│   └── middleware/   → JWT auth middleware
+│
+├── frontend/
+│   ├── app/          → Pages (dashboard, ats-checker, analysis, auth)
+│   ├── components/   → ChatBot, Charts, ExportButton
+│   ├── lib/          → API client config
+│   └── types/        → Shared TS types
+
 ````
 
-### 2. Setup Backend
+---
+
+## 🧪 How It Works
+
+1. **Upload resume** (PDF) and **paste JD**
+2. AI extracts text and analyzes using:
+   - Gemini (primary)
+   - OpenRouter / Mistral / Cohere (fallbacks)
+3. AI generates:
+   - ✅ Match Score (0–100%)
+   - 🧩 Skills Matched / Missing
+   - 🎓 Education / Experience gap assessment
+   - 📚 Personalized next steps
+4. Bonus: ATS simulation for resume structure and keyword strength
+
+---
+
+## 📡 API Endpoints
+
+| Method | Endpoint                     | Purpose                                |
+|--------|------------------------------|----------------------------------------|
+| POST   | `/api/auth/register`         | Register a new user                    |
+| POST   | `/api/auth/login`            | Authenticate and receive JWT          |
+| POST   | `/api/analysis/analyze`      | Upload resume + JD and trigger analysis |
+| GET    | `/api/analysis/history`      | List user's analysis history          |
+| GET    | `/api/analysis/:id`          | View full result of a single analysis |
+| POST   | `/api/chat/analysis/:id`     | Ask AI questions about an analysis    |
+| POST   | `/api/ats/check`             | Run public ATS compatibility check    |
+| GET    | `/api/ats/tips`              | Retrieve universal ATS formatting tips |
+
+---
+
+## ⚙️ Setup Instructions
+
+### 🔐 Prerequisites
+- Node.js v18+
+- MongoDB URI (Atlas or local)
+- API keys for:
+  - Gemini
+  - OpenRouter
+  - Mistral
+  - Cohere
+
+---
+
+### 📦 Backend
 
 ```bash
 cd backend
 npm install
-cp .env.example .env  # then edit it with your keys
-npm run dev
-```
+cp .env.example .env
+````
 
-**`.env` example:**
+**`.env`**
 
-```
+```env
 PORT=12001
-MONGO_URI=your-mongodb-uri
-JWT_SECRET=your-jwt-secret
-JWT_LIFETIME=30d
-GEMINI_API_KEY=your-google-gemini-key
-OPEN_ROUTER_API_KEY=optional
-MISTRAL_API_KEY=optional
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=your_secret_key
+JWT_LIFETIME=7d
+
+# AI API Keys
+GEMINI_API_KEY=...
+OPEN_ROUTER_API_KEY=...
+MISTRAL_API_KEY=...
+COHERE_API_KEY=...
 ```
 
-### 3. Setup Frontend
+Start the server:
 
 ```bash
-cd ../frontend
-npm install
-echo "NEXT_PUBLIC_API_URL=http://localhost:12001" > .env.local
 npm run dev
 ```
 
-* Frontend: [http://localhost:3000](http://localhost:3000)
-* Backend API: [http://localhost:12001/api](http://localhost:12001/api)
-
 ---
 
-## 🚀 Deployment
+### 💻 Frontend
 
-### Recommended:
-
-* **Frontend**: Vercel
-* **Backend**: Render
-
-Set API keys in both platforms' dashboards. You can also deploy via Docker or VPS (see `DEPLOYMENT.md`).
-
----
-
-## 📡 Key API Endpoints
-
-| Method | Endpoint                 | Auth | Purpose                      |
-| ------ | ------------------------ | ---- | ---------------------------- |
-| POST   | `/api/auth/register`     | ❌    | Register user                |
-| POST   | `/api/auth/login`        | ❌    | Login                        |
-| POST   | `/api/analysis/analyze`  | ✅    | Upload resume + JD           |
-| GET    | `/api/analysis/history`  | ✅    | View past results            |
-| GET    | `/api/analysis/:id`      | ✅    | Get a specific result        |
-| POST   | `/api/chat/analysis/:id` | ✅    | Ask AI questions             |
-| POST   | `/api/ats/check`         | ❌    | Free ATS compatibility check |
-| GET    | `/api/ats/tips`          | ❌    | General ATS guidance         |
-
----
-
-## 📈 Example Output
-
-```json
-{
-  "matchScore": 67,
-  "verdict": "UNDERQUALIFIED",
-  "skillsMatch": ["JavaScript", "React"],
-  "skillsGap": ["Node.js", "TypeScript"],
-  "recommendations": [
-    "Gain 1–2 years of experience",
-    "Learn missing technologies"
-  ]
-}
+```bash
+cd frontend
+npm install
+cp .env.local.example .env.local
 ```
+
+**`.env.local`**
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:12001
+# Or production: https://yourprojectname.onrender.com
+```
+
+Start the app:
+
+```bash
+npm run dev
+```
+
+---
+
+
+## 📈 AI Match & ATS Logic
+
+### Match Score Calculation
+
+* AI uses prompt-engineered scoring via LLMs
+* Strict rules for:
+
+  * Experience years
+  * Education level
+  * Role seniority
+
+### ATS Simulation
+
+* Checks:
+
+  * Contact info visibility
+  * Section headers (Experience, Education, Skills)
+  * Parsing traps (tables, special formatting)
+  * Keyword and verb coverage
+* Outputs realistic score (20–90%) + issues + suggestions
 
 ---
 
 ## 👤 Author
 
 **Dheemanth M**
-Full-Stack Developer | AI Engineer
+
 📧 [dheemanthm.official@gmail.com](mailto:dheemanthm.official@gmail.com)
 🔗 [github.com/dheemanthm2004](https://github.com/dheemanthm2004)
+
+

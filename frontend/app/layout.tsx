@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     images: ['https://i.ibb.co/k2G0pDRm/Screenshot-2025-06-30-234742.png'],
   },
   icons: {
-    icon: 'https://i.ibb.co/gczr2t9/Screenshot-2025-06-30-235805.png',
+    icon: 'https://i.ibb.co/0y7QkrBJ/image.png',
   },
 }
 
@@ -46,7 +46,7 @@ export default function RootLayout({
       <head>
         <link
           rel="icon"
-          href="https://i.ibb.co/gczr2t9/Screenshot-2025-06-30-235805.png"
+          href="https://i.ibb.co/0y7QkrBJ/image.png"
         />
       </head>
       <body>
