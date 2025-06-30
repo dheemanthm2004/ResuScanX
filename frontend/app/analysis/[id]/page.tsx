@@ -92,46 +92,19 @@ export default function AnalysisDetailPage() {
         <div className={`grid gap-8 ${showChat ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1'}`}>
           {/* Main Content */}
           <div className={showChat ? 'lg:col-span-2' : 'col-span-1'}>
-            {/* Visual Analysis */}
-            {analysis.analysis.breakdown ? (
-              <ComprehensiveChart
-                matchScore={analysis.analysis.matchScore}
-                eligibilityScore={analysis.analysis.breakdown.eligibilityScore}
-                skillScore={analysis.analysis.breakdown.skillScore}
-                skillsMatch={analysis.analysis.skillsMatch.length}
-                skillsGap={analysis.analysis.skillsGap.length}
-                verdict={analysis.analysis.verdict || 'QUALIFIED'}
-              />
-            ) : (
-              <div className="mb-8">
-                {/* Enhanced Score Overview for Old Analysis */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8 mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Analysis Overview</h3>
-                  <div className="text-center mb-6">
-                    <div className={`text-6xl font-bold ${getScoreColor(analysis.analysis.matchScore)} mb-4`}>
-                      {analysis.analysis.matchScore}%
-                    </div>
-                    <p className="text-xl text-gray-600 mb-2">Overall Match Score</p>
-                    {analysis.analysis.verdict && (
-                      <div className={`inline-flex px-4 py-2 rounded-full text-sm font-bold ${
-                        analysis.analysis.verdict === 'QUALIFIED' ? 'bg-emerald-100 text-emerald-800' :
-                        analysis.analysis.verdict === 'UNDERQUALIFIED' ? 'bg-rose-100 text-rose-800' :
-                        analysis.analysis.verdict === 'COMPLETELY_UNQUALIFIED' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {analysis.analysis.verdict.replace('_', ' ')}
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-gray-700 text-center text-lg">{analysis.analysis.summary}</p>
-                </div>
-                <SkillsChart 
-                  matchedSkills={analysis.analysis.skillsMatch.length}
-                  missingSkills={analysis.analysis.skillsGap.length}
-                  matchScore={analysis.analysis.matchScore}
-                />
-              </div>
-            )}
+            {/* Visual Analysis - Always show comprehensive chart */}
+            <ComprehensiveChart
+              matchScore={analysis.analysis.matchScore}
+              eligibilityScore={analysis.analysis.breakdown?.eligibilityScore || Math.max(analysis.analysis.matchScore - 10, 30)}
+              skillScore={analysis.analysis.breakdown?.skillScore || 
+                (analysis.analysis.skillsMatch.length > 0 ? 
+                  Math.round((analysis.analysis.skillsMatch.length / (analysis.analysis.skillsMatch.length + analysis.analysis.skillsGap.length)) * 100) : 50)
+              }
+              skillsMatch={analysis.analysis.skillsMatch.length}
+              skillsGap={analysis.analysis.skillsGap.length}
+              verdict={analysis.analysis.verdict || (analysis.analysis.matchScore >= 70 ? 'QUALIFIED' : analysis.analysis.matchScore >= 40 ? 'UNDERQUALIFIED' : 'COMPLETELY_UNQUALIFIED')}
+            />
+
 
             {/* Job Description */}
             {analysis.jobDescription && (

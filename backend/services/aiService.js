@@ -319,8 +319,12 @@ ${analysis.recommendations.map(rec => `• ${rec}`).join('\n')}
 
   // AI-powered comprehensive analysis using multiple providers
   async getComprehensiveAIAnalysis(resumeText, jobDescription) {
-    console.log('Starting AI analysis with 4 providers...');
-    const prompt = `You are an experienced HR recruiter analyzing resume-job fit. Be realistic - no resume is 100% perfect match.
+    console.log('Starting AI analysis...');
+    
+    // Store resume and JD for use in parsing
+    this.currentResumeText = resumeText;
+    this.currentJobDescription = jobDescription;
+    const prompt = `You are a STRICT HR recruiter. Analyze this resume against job requirements with PRECISION.
 
 RESUME:
 ${resumeText.substring(0, 3000)}
@@ -328,75 +332,59 @@ ${resumeText.substring(0, 3000)}
 JOB DESCRIPTION:
 ${jobDescription.substring(0, 2000)}
 
-ANALYSIS RULES:
-1. MAJOR BLOCKERS (give low scores 10-30%):
-   - Zero relevant work experience for experienced roles (3+ years required)
-   - Completely wrong seniority level (junior applying for senior/lead roles)
-   - Missing critical education requirements (degree required but none)
+STRICT ANALYSIS RULES:
 
-2. MINOR GAPS (acceptable, give decent scores 60-85%):
-   - Missing 1-2 technical skills (can be learned)
-   - 1-2 years experience gap (close enough)
-   - Different but related background
-   - Some missing nice-to-have requirements
+1. EXPERIENCE REQUIREMENTS (CRITICAL):
+   - If JD says "1-2 years" and resume shows ZERO experience → Score: 20-30% MAX
+   - If JD says "3+ years" and resume shows 0-1 years → Score: 15-25% MAX
+   - If JD says "5+ years" and resume shows 0-3 years → Score: 10-20% MAX
+   - Fresh graduates can only qualify for "entry-level" or "0-1 year" roles
 
-3. GOOD MATCHES (give high scores 80-95%):
-   - Meets core requirements with minor gaps
-   - Relevant experience even if not exact
-   - Transferable skills from related roles
+2. EDUCATION REQUIREMENTS (CRITICAL):
+   - If JD requires "Bachelor's degree" and resume has none → Score: 25% MAX
+   - If JD requires "Master's degree" and resume has Bachelor's → Score: 60% MAX
 
-Be REALISTIC - most decent candidates should score 60-85%. Only completely unqualified candidates get below 30%.
+3. SENIORITY MISMATCH (CRITICAL):
+   - Fresh graduate applying for "Senior" role → Score: 15% MAX
+   - Junior (0-2 years) applying for "Lead/Manager" → Score: 20% MAX
+
+4. ONLY MINOR GAPS GET GOOD SCORES (70%+):
+   - Missing 1-2 non-critical skills
+   - Slightly different but related experience
+   - Minor certification gaps
+
+Be BRUTALLY HONEST. If someone doesn't meet basic requirements, give them 15-30% scores.
 
 Respond in JSON format:
 {
-  "matchScore": number (0-100, be realistic - most should be 60-85%),
+  "matchScore": number (0-100, BE STRICT - unqualified = 15-30%),
   "skillsMatch": ["skill1", "skill2"],
   "skillsGap": ["missing1", "missing2"],
-  "experienceGap": "realistic assessment of experience match",
-  "educationGap": "realistic education assessment",
-  "seniorityMismatch": "realistic seniority level assessment",
-  "recommendations": ["practical recommendations for improvement"],
-  "summary": "balanced, realistic summary",
+  "experienceGap": "HONEST assessment - use 'lacks required experience' if true",
+  "educationGap": "HONEST education assessment",
+  "seniorityMismatch": "HONEST seniority assessment",
+  "recommendations": ["HONEST recommendations - tell them if they're not ready"],
+  "summary": "HONEST summary - don't sugarcoat",
   "verdict": "QUALIFIED/UNDERQUALIFIED/COMPLETELY_UNQUALIFIED"
 }`;
 
     // Use Gemini as primary, others as fallback only
     try {
       console.log('Using Gemini AI for analysis...');
-      const result = await this.tryGeminiAnalysis(prompt);
+      const result = await this.getGeminiAnalysis(prompt, resumeText, jobDescription);
       if (result) {
         console.log('Gemini analysis successful!');
         return result;
       }
     } catch (error) {
-      console.log('Gemini failed, trying fallback providers...');
-    }
-    
-    // Only use other providers if Gemini fails
-    const fallbackProviders = [
-      { name: 'OpenRouter', fn: () => this.tryOpenRouterAnalysis(prompt) },
-      { name: 'Mistral', fn: () => this.tryMistralAnalysis(prompt) }
-    ];
-
-    for (const provider of fallbackProviders) {
-      try {
-        console.log(`Trying fallback ${provider.name}...`);
-        const result = await provider.fn();
-        if (result) {
-          console.log(`${provider.name} fallback successful!`);
-          return result;
-        }
-      } catch (error) {
-        console.log(`${provider.name} fallback failed:`, error.message);
-        continue;
-      }
+      console.log('Gemini failed:', error.message);
     }
     
     console.log('All AI providers failed');
     return null; // All AI providers failed
   }
 
-  async tryGeminiAnalysis(prompt) {
+  async getGeminiAnalysis(prompt, resumeText, jobDescription) {
     try {
       console.log('Making Gemini API call...');
       const response = await axios.post(
@@ -414,7 +402,7 @@ Respond in JSON format:
       const aiResponse = response.data.candidates[0].content.parts[0].text;
       console.log('AI Response:', aiResponse.substring(0, 200) + '...');
       
-      const parsed = this.parseAIAnalysis(aiResponse);
+      const parsed = this.processAIResponse(aiResponse, resumeText, jobDescription);
       console.log('Parsed result:', parsed ? 'Success' : 'Failed');
       return parsed;
     } catch (error) {
@@ -423,7 +411,7 @@ Respond in JSON format:
     }
   }
 
-  async tryOpenRouterAnalysis(prompt) {
+  async tryOpenRouterAnalysis(prompt, resumeText, jobDescription) {
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
@@ -443,7 +431,7 @@ Respond in JSON format:
     return this.parseAIAnalysis(response.data.choices[0].message.content);
   }
 
-  async tryMistralAnalysis(prompt) {
+  async tryMistralAnalysis(prompt, resumeText, jobDescription) {
     const response = await axios.post(
       'https://api.mistral.ai/v1/chat/completions',
       {
@@ -483,15 +471,15 @@ Respond in JSON format:
     return this.parseAIAnalysis(response.data.generations[0].text);
   }
 
-  parseAIAnalysis(response) {
+  processAIResponse(response, resumeText, jobDescription) {
     try {
       // Try to extract JSON from response
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         
-        // Apply intelligent scoring logic
-        const intelligentAnalysis = this.applyIntelligentScoring(parsed);
+        // Apply intelligent scoring logic with resume and JD text
+        const intelligentAnalysis = this.applyIntelligentScoring(parsed, resumeText, jobDescription);
         
         return intelligentAnalysis;
       }
@@ -502,62 +490,93 @@ Respond in JSON format:
     return null;
   }
 
+
+
   // Apply intelligent scoring that prioritizes eligibility over skills
-  applyIntelligentScoring(parsed) {
+  applyIntelligentScoring(parsed, resumeText, jobDescription) {
     const skillsMatch = Array.isArray(parsed.skillsMatch) ? parsed.skillsMatch : [];
     const skillsGap = Array.isArray(parsed.skillsGap) ? parsed.skillsGap : [];
     let finalScore = Math.min(Math.max(parsed.matchScore || 0, 0), 100);
     let verdict = parsed.verdict || 'UNKNOWN';
     let blockingIssues = [];
     
-    // Check for blocking eligibility issues
+    // STRICT validation - check resume vs JD directly
+    if (!resumeText || !jobDescription) {
+      console.log('Missing resumeText or jobDescription in applyIntelligentScoring');
+      return null;
+    }
+    const resumeLower = resumeText.toLowerCase();
+    const jdLower = jobDescription.toLowerCase();
+    
+    // Check experience requirements strictly
+    const expRequired = jdLower.match(/(\d+)[\s\-+]*(?:to|-)\s*(\d+)?\s*(?:years?|yrs?)\s*(?:of\s*)?(?:experience|exp)/i);
+    const isEntryLevel = jdLower.includes('entry level') || jdLower.includes('fresher') || jdLower.includes('0-1 year');
+    const isSeniorRole = jdLower.includes('senior') || jdLower.includes('lead') || jdLower.includes('manager') || jdLower.includes('architect');
+    
+    // Check if candidate is fresher/student
+    const isFresher = resumeLower.includes('student') || resumeLower.includes('fresher') || 
+                     resumeLower.includes('graduate') || resumeLower.includes('intern') ||
+                     !resumeLower.match(/\d+\s*(?:years?|yrs?)\s*(?:of\s*)?(?:experience|exp)/i);
+    
+    // STRICT experience validation
+    if (expRequired && !isEntryLevel) {
+      const requiredYears = parseInt(expRequired[1]) || 1;
+      if (isFresher && requiredYears >= 1) {
+        blockingIssues.push('EXPERIENCE_INSUFFICIENT');
+        finalScore = Math.min(finalScore, 25); // Very low score for experience mismatch
+      }
+    }
+    
+    // STRICT seniority validation
+    if (isSeniorRole && isFresher) {
+      blockingIssues.push('SENIORITY_MISMATCH');
+      finalScore = Math.min(finalScore, 20); // Very low score for seniority mismatch
+    }
+    
+    // Check education requirements
+    const degreeRequired = jdLower.includes('bachelor') || jdLower.includes('degree') || jdLower.includes('b.tech') || jdLower.includes('b.e');
+    const hasDegree = resumeLower.includes('bachelor') || resumeLower.includes('b.tech') || resumeLower.includes('b.e') || resumeLower.includes('degree');
+    
+    if (degreeRequired && !hasDegree) {
+      blockingIssues.push('EDUCATION_INSUFFICIENT');
+      finalScore = Math.min(finalScore, 30);
+    }
+    
+    // Additional AI-based blocking issues
     const experienceText = (parsed.experienceGap || '').toLowerCase();
     const educationText = (parsed.educationGap || '').toLowerCase();
     const seniorityText = (parsed.seniorityMismatch || '').toLowerCase();
     
-    // Experience blocking issues
-    if (experienceText.includes('lacks') || experienceText.includes('insufficient') || 
-        experienceText.includes('no experience') || experienceText.includes('fresher') ||
-        experienceText.includes('underqualified') || experienceText.includes('years short')) {
+    if (experienceText.includes('lacks') || experienceText.includes('zero experience') || 
+        experienceText.includes('no relevant experience')) {
       blockingIssues.push('EXPERIENCE_INSUFFICIENT');
+      finalScore = Math.min(finalScore, 25);
     }
     
-    // Education blocking issues  
-    if (educationText.includes('does not meet') || educationText.includes('lacks') ||
-        educationText.includes('insufficient') || educationText.includes('required degree')) {
+    if (educationText.includes('does not meet') || educationText.includes('lacks required')) {
       blockingIssues.push('EDUCATION_INSUFFICIENT');
+      finalScore = Math.min(finalScore, 30);
     }
     
-    // Seniority blocking issues
-    if (seniorityText.includes('too junior') || seniorityText.includes('not senior enough') ||
-        seniorityText.includes('lacks leadership') || seniorityText.includes('inappropriate level')) {
-      blockingIssues.push('SENIORITY_MISMATCH');
-    }
-    
-    // Use AI's verdict primarily, only override for major issues
-    if (parsed.verdict && parsed.verdict !== 'UNKNOWN') {
-      verdict = parsed.verdict;
-    } else {
-      // Determine verdict based on final score
-      if (finalScore >= 70) {
-        verdict = 'QUALIFIED';
-      } else if (finalScore >= 40) {
-        verdict = 'UNDERQUALIFIED';
-      } else {
-        verdict = 'COMPLETELY_UNQUALIFIED';
-      }
-    }
-    
-    // Only override AI verdict for extreme cases
+    // STRICT verdict determination - override AI if it's being too lenient
     if (blockingIssues.length > 0) {
-      if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT') && 
-          experienceText.includes('zero experience')) {
-        finalScore = Math.min(finalScore, 25);
-        verdict = 'COMPLETELY_UNQUALIFIED';
-      } else if (blockingIssues.length >= 2 && finalScore < 30) {
-        finalScore = Math.min(finalScore, 20);
-        verdict = 'COMPLETELY_UNQUALIFIED';
+      if (finalScore > 50) {
+        console.log('AI was too lenient, correcting score from', finalScore, 'to', Math.min(finalScore, 30));
+        finalScore = Math.min(finalScore, 30); // AI was too lenient
       }
+      verdict = 'COMPLETELY_UNQUALIFIED';
+    } else if (finalScore >= 70) {
+      verdict = 'QUALIFIED';
+    } else if (finalScore >= 40) {
+      verdict = 'UNDERQUALIFIED';
+    } else {
+      verdict = 'COMPLETELY_UNQUALIFIED';
+    }
+    
+    // Final validation - if AI gave high score but candidate is clearly unqualified
+    if (parsed.matchScore > 60 && blockingIssues.length > 0) {
+      console.log('Overriding AI score:', parsed.matchScore, '-> corrected to:', finalScore);
+      console.log('Blocking issues detected:', blockingIssues);
     }
     
     // Generate comprehensive breakdown

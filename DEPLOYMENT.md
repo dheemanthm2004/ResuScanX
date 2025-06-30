@@ -1,339 +1,489 @@
 # 🚀 ResuScanX Deployment Guide
 
-**Complete step-by-step guide to deploy ResuScanX for production use**
+Complete step-by-step guide to deploy ResuScanX in production.
 
-## 📋 Prerequisites
+## 🎯 Deployment Options
 
-- GitHub account
-- Vercel account (free)
-- Railway/Render account (free tier available)
-- MongoDB Atlas account (free)
-- AI API keys (all have free tiers)
+| Option | Cost | Difficulty | Best For |
+|--------|------|------------|----------|
+| **Vercel + Railway** | Free tier available | Easy | Beginners |
+| **Docker + VPS** | $5-20/month | Medium | Developers |
+| **AWS/GCP** | Pay-as-use | Hard | Enterprise |
 
 ---
 
-## 🗄️ Step 1: Database Setup (MongoDB Atlas)
+## 🌟 Option 1: Vercel + Railway (Recommended)
 
-### 1.1 Create MongoDB Atlas Account
-1. Go to [mongodb.com/atlas](https://www.mongodb.com/atlas)
-2. Click **"Try Free"** and create account
-3. Choose **"Shared"** (free tier)
-4. Select **AWS** and closest region
-5. Cluster name: `resuscanx-cluster`
+### Step 1: Setup MongoDB Atlas (Free)
 
-### 1.2 Configure Database Access
-1. **Database Access** → **Add New Database User**
+1. **Create Account**: https://cloud.mongodb.com
+2. **Create Cluster**: 
+   - Choose "Free Shared" (M0)
+   - Select region closest to users
+   - Cluster name: `resuscanx-cluster`
+3. **Create Database User**:
    - Username: `resuscanx-user`
-   - Password: Generate secure password
-   - Role: `Atlas admin`
-
-2. **Network Access** → **Add IP Address**
-   - Click **"Allow Access from Anywhere"** (0.0.0.0/0)
-   - Or add your specific IPs
-
-### 1.3 Get Connection String
-1. **Clusters** → **Connect** → **Connect your application**
-2. Copy connection string:
+   - Password: Generate strong password
+4. **Network Access**: Add `0.0.0.0/0` (allow all IPs)
+5. **Get Connection String**: 
    ```
-   mongodb+srv://resuscanx-user:<password>@resuscanx-cluster.xxxxx.mongodb.net/?retryWrites=true&w=majority
+   mongodb+srv://resuscanx-user:PASSWORD@resuscanx-cluster.xxxxx.mongodb.net/resuscanx
    ```
-3. Replace `<password>` with your actual password
 
----
+### Step 2: Get API Keys (Free Tiers)
 
-## 🔧 Step 2: Backend Deployment (Railway)
+#### Google Gemini (Required)
+1. Visit: https://makersuite.google.com/app/apikey
+2. Create new API key
+3. Copy: `AIzaSy...` format
 
-### 2.1 Prepare Backend for Deployment
-1. **Update package.json** in backend folder:
-```json
-{
-  "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "build": "echo 'No build step required'"
-  },
-  "engines": {
-    "node": "18.x"
-  }
-}
-```
+#### OpenRouter (Optional Fallback)
+1. Visit: https://openrouter.ai/keys
+2. Sign up and create key
+3. Copy: `sk-or-v1-...` format
 
-2. **Create railway.json** in backend folder:
-```json
-{
-  "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "builder": "NIXPACKS"
-  },
-  "deploy": {
-    "startCommand": "npm start",
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
-  }
-}
-```
+### Step 3: Deploy Backend (Railway)
 
-### 2.2 Deploy to Railway
-1. Go to [railway.app](https://railway.app)
-2. Sign up with GitHub
-3. **New Project** → **Deploy from GitHub repo**
-4. Select your ResuScanX repository
-5. Choose **backend** folder as root directory
+1. **Install Railway CLI**:
+   ```bash
+   npm install -g @railway/cli
+   ```
 
-### 2.3 Configure Environment Variables
-In Railway dashboard → **Variables** tab:
-```env
-NODE_ENV=production
-PORT=8080
-MONGO_URI=mongodb+srv://resuscanx-user:yourpassword@resuscanx-cluster.xxxxx.mongodb.net/resuscanx?retryWrites=true&w=majority
-JWT_SECRET=your-super-secure-jwt-secret-key-here
-JWT_LIFETIME=30d
-OPEN_ROUTER_API_KEY=sk-or-v1-your-openrouter-key
-MISTRAL_API_KEY=your-mistral-api-key
-COHERE_API_KEY=your-cohere-api-key
-GEMINI_API_KEY=your-gemini-api-key
-```
+2. **Login to Railway**:
+   ```bash
+   railway login
+   ```
 
-### 2.4 Get Backend URL
-- After deployment, Railway provides a URL like: `https://resuscanx-backend-production.up.railway.app`
-- Copy this URL for frontend configuration
+3. **Deploy Backend**:
+   ```bash
+   cd backend
+   railway new
+   # Choose "Empty Project"
+   # Project name: resuscanx-backend
+   
+   railway deploy
+   ```
 
----
+4. **Add Environment Variables** in Railway Dashboard:
+   ```
+   PORT=12001
+   NODE_ENV=production
+   MONGO_URI=mongodb+srv://resuscanx-user:PASSWORD@cluster.mongodb.net/resuscanx
+   JWT_SECRET=your-super-secure-32-character-secret-key
+   JWT_LIFETIME=30d
+   GEMINI_API_KEY=AIzaSy-your-gemini-key
+   OPEN_ROUTER_API_KEY=sk-or-v1-your-openrouter-key
+   MISTRAL_API_KEY=your-mistral-key
+   COHERE_API_KEY=your-cohere-key
+   ```
 
-## 🌐 Step 3: Frontend Deployment (Vercel)
+5. **Get Backend URL**: Copy from Railway dashboard (e.g., `https://resuscanx-backend-production.up.railway.app`)
 
-### 3.1 Prepare Frontend for Deployment
-1. **Update next.config.js**:
+### Step 4: Deploy Frontend (Vercel)
+
+1. **Install Vercel CLI**:
+   ```bash
+   npm install -g vercel
+   ```
+
+2. **Deploy Frontend**:
+   ```bash
+   cd frontend
+   vercel
+   # Follow prompts:
+   # - Link to existing project? No
+   # - Project name: resuscanx
+   # - Directory: ./
+   # - Override settings? No
+   ```
+
+3. **Add Environment Variable** in Vercel Dashboard:
+   ```
+   NEXT_PUBLIC_API_URL=https://your-railway-backend-url.up.railway.app
+   ```
+
+4. **Redeploy**:
+   ```bash
+   vercel --prod
+   ```
+
+### Step 5: Configure CORS
+
+Update `backend/server.js`:
 ```javascript
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  env: {
-    API_URL: process.env.NODE_ENV === 'production' 
-      ? 'https://your-railway-backend-url.up.railway.app/api'
-      : 'http://localhost:12001/api'
-  },
-  images: {
-    domains: ['via.placeholder.com'],
-  },
-}
-
-module.exports = nextConfig
-```
-
-2. **Update API configuration** in `frontend/lib/api.ts`:
-```typescript
-const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-railway-backend-url.up.railway.app/api'
-  : 'http://localhost:12001/api';
-```
-
-### 3.2 Deploy to Vercel
-1. Go to [vercel.com](https://vercel.com)
-2. Sign up with GitHub
-3. **New Project** → Import your ResuScanX repository
-4. **Framework Preset**: Next.js
-5. **Root Directory**: `frontend`
-6. Click **Deploy**
-
-### 3.3 Configure Custom Domain (Optional)
-1. **Project Settings** → **Domains**
-2. Add your custom domain: `resuscanx.yourdomain.com`
-3. Configure DNS records as instructed
-
----
-
-## 🔑 Step 4: API Keys Setup
-
-### 4.1 OpenRouter API
-1. Go to [openrouter.ai](https://openrouter.ai)
-2. Sign up and get free credits
-3. **API Keys** → Create new key
-4. Copy: `sk-or-v1-xxxxxxxxxx`
-
-### 4.2 Mistral AI
-1. Go to [console.mistral.ai](https://console.mistral.ai)
-2. Sign up for free tier
-3. **API Keys** → Create new key
-4. Copy the key
-
-### 4.3 Cohere
-1. Go to [dashboard.cohere.ai](https://dashboard.cohere.ai)
-2. Sign up for free tier
-3. **API Keys** → Create new key
-4. Copy the key
-
-### 4.4 Google Gemini
-1. Go to [makersuite.google.com](https://makersuite.google.com)
-2. **Get API Key** → Create new key
-3. Copy: `AIzaSyxxxxxxxxxx`
-
----
-
-## 🔧 Step 5: Production Configuration
-
-### 5.1 Update CORS Settings
-In `backend/server.js`:
-```javascript
-const cors = require('cors');
-
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://resuscanx.vercel.app',
-    'https://your-custom-domain.com'
+    'https://your-vercel-app.vercel.app'
   ],
   credentials: true
 }));
 ```
 
-### 5.2 Update Frontend API URLs
-Replace all localhost URLs in frontend with your production backend URL.
-
-### 5.3 Environment Variables Check
-Ensure all environment variables are set in both Railway and Vercel:
-
-**Railway (Backend):**
-- All API keys
-- MongoDB URI
-- JWT secrets
-
-**Vercel (Frontend):**
-- API_URL pointing to Railway backend
-
----
-
-## 🧪 Step 6: Testing Deployment
-
-### 6.1 Test Backend
+Redeploy backend:
 ```bash
-curl https://your-railway-backend-url.up.railway.app/api/auth/login
+railway deploy
 ```
 
-### 6.2 Test Frontend
-1. Visit your Vercel URL
-2. Register new account
-3. Upload resume and test analysis
-4. Check AI chat functionality
-
-### 6.3 Monitor Logs
-- **Railway**: Check deployment logs for errors
-- **Vercel**: Check function logs for frontend issues
-- **MongoDB**: Monitor database connections
+### ✅ Done! Your app is live at: `https://your-app.vercel.app`
 
 ---
 
-## 🚀 Step 7: Custom Domain & SSL
+## 🐳 Option 2: Docker + VPS
 
-### 7.1 Frontend Domain (Vercel)
-1. **Project Settings** → **Domains**
-2. Add: `resuscanx.yourdomain.com`
-3. Configure DNS:
-   ```
-   Type: CNAME
-   Name: resuscanx
-   Value: cname.vercel-dns.com
-   ```
+### Step 1: Prepare VPS
 
-### 7.2 Backend Domain (Railway)
-1. **Settings** → **Domains**
-2. Add custom domain: `api.resuscanx.yourdomain.com`
-3. Configure DNS as instructed
+**Recommended Providers**:
+- DigitalOcean ($5/month droplet)
+- Linode ($5/month nanode)
+- Vultr ($2.50/month instance)
 
----
-
-## 📊 Step 8: Monitoring & Analytics
-
-### 8.1 Set Up Monitoring
-1. **Railway**: Built-in metrics dashboard
-2. **Vercel**: Analytics and performance monitoring
-3. **MongoDB**: Atlas monitoring for database performance
-
-### 8.2 Error Tracking
-Add error tracking service like Sentry:
+**VPS Setup**:
 ```bash
-npm install @sentry/node @sentry/nextjs
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Install Nginx
+sudo apt install nginx -y
+```
+
+### Step 2: Create Docker Files
+
+**Backend Dockerfile** (`backend/Dockerfile`):
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 12001
+CMD ["npm", "start"]
+```
+
+**Frontend Dockerfile** (`frontend/Dockerfile`):
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+**Docker Compose** (`docker-compose.yml`):
+```yaml
+version: '3.8'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "12001:12001"
+    environment:
+      - PORT=12001
+      - NODE_ENV=production
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_LIFETIME=30d
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPEN_ROUTER_API_KEY=${OPEN_ROUTER_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - COHERE_API_KEY=${COHERE_API_KEY}
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://your-domain.com:12001
+    restart: unless-stopped
+    depends_on:
+      - backend
+```
+
+### Step 3: Environment Setup
+
+Create `.env` file:
+```bash
+MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/resuscanx
+JWT_SECRET=your-super-secure-32-character-secret-key
+GEMINI_API_KEY=AIzaSy-your-gemini-key
+OPEN_ROUTER_API_KEY=sk-or-v1-your-openrouter-key
+MISTRAL_API_KEY=your-mistral-key
+COHERE_API_KEY=your-cohere-key
+```
+
+### Step 4: Deploy with Docker
+
+```bash
+# Clone repository
+git clone https://github.com/dheemanthm2004/ResuScanX.git
+cd ResuScanX
+
+# Build and start
+docker-compose up -d --build
+
+# Check status
+docker-compose ps
+```
+
+### Step 5: Configure Nginx
+
+Create Nginx config (`/etc/nginx/sites-available/resuscanx`):
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass http://localhost:12001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Enable site:
+```bash
+sudo ln -s /etc/nginx/sites-available/resuscanx /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### Step 6: SSL Certificate (Optional)
+
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx -y
+
+# Get SSL certificate
+sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+
+# Auto-renewal
+sudo crontab -e
+# Add: 0 12 * * * /usr/bin/certbot renew --quiet
 ```
 
 ---
 
-## 🔒 Step 9: Security Checklist
+## 🔧 Production Optimizations
 
-- [ ] Environment variables secured
-- [ ] CORS properly configured
-- [ ] JWT secrets are strong
-- [ ] Database access restricted
-- [ ] API rate limiting enabled
-- [ ] HTTPS enforced
-- [ ] File upload limits set
+### Backend Optimizations
 
----
-
-## 🎯 Step 10: Performance Optimization
-
-### 10.1 Backend Optimization
+**1. Add Rate Limiting**:
 ```javascript
-// Add compression
-const compression = require('compression');
-app.use(compression());
-
-// Add rate limiting
 const rateLimit = require('express-rate-limit');
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100 // limit each IP to 100 requests per windowMs
 });
-app.use(limiter);
+
+app.use('/api/', limiter);
 ```
 
-### 10.2 Frontend Optimization
-- Enable Vercel Analytics
-- Optimize images and fonts
-- Enable caching headers
+**2. Add Compression**:
+```javascript
+const compression = require('compression');
+app.use(compression());
+```
+
+**3. Add Security Headers**:
+```javascript
+const helmet = require('helmet');
+app.use(helmet());
+```
+
+### Frontend Optimizations
+
+**1. Enable Image Optimization** (`next.config.js`):
+```javascript
+module.exports = {
+  images: {
+    domains: ['your-domain.com'],
+    formats: ['image/webp', 'image/avif'],
+  },
+  compress: true,
+  poweredByHeader: false,
+}
+```
+
+**2. Add Service Worker** for caching
+
+### Database Optimizations
+
+**1. Add Indexes**:
+```javascript
+// In MongoDB
+db.analyses.createIndex({ "userId": 1, "createdAt": -1 })
+db.users.createIndex({ "email": 1 }, { unique: true })
+```
+
+---
+
+## 📊 Monitoring & Maintenance
+
+### Health Checks
+
+**Backend Health Endpoint** (`/api/health`):
+```javascript
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
+  });
+});
+```
+
+### Log Management
+
+**PM2 Logs** (if using PM2):
+```bash
+pm2 logs resuscanx-backend
+pm2 logs resuscanx-frontend
+```
+
+**Docker Logs**:
+```bash
+docker-compose logs -f backend
+docker-compose logs -f frontend
+```
+
+### Backup Strategy
+
+**MongoDB Backup**:
+```bash
+# Daily backup script
+mongodump --uri="mongodb+srv://user:pass@cluster.mongodb.net/resuscanx" --out=/backups/$(date +%Y%m%d)
+```
 
 ---
 
 ## 🚨 Troubleshooting
 
-### Common Issues:
+### Common Issues
 
 **1. CORS Errors**
-- Check origin URLs in backend CORS config
-- Ensure frontend API_URL is correct
+```javascript
+// Fix: Update CORS configuration
+app.use(cors({
+  origin: ['https://your-frontend-domain.com'],
+  credentials: true
+}));
+```
 
-**2. Database Connection Failed**
-- Verify MongoDB connection string
-- Check IP whitelist in Atlas
+**2. API Key Issues**
+```bash
+# Check environment variables
+echo $GEMINI_API_KEY
+# Should not be empty
+```
 
-**3. API Keys Not Working**
-- Verify all keys are correctly set
-- Check API quotas and limits
+**3. Database Connection**
+```bash
+# Test MongoDB connection
+node -e "
+const mongoose = require('mongoose');
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('Connected!'))
+  .catch(err => console.error('Error:', err));
+"
+```
 
-**4. File Upload Issues**
-- Check file size limits
-- Verify multer configuration
+**4. Memory Issues**
+```bash
+# Increase Node.js memory limit
+node --max-old-space-size=4096 server.js
+```
 
-**5. Build Failures**
-- Check Node.js version compatibility
-- Verify all dependencies are installed
+### Performance Issues
+
+**1. Slow API Responses**
+- Add Redis caching
+- Optimize database queries
+- Use CDN for static assets
+
+**2. High Memory Usage**
+- Monitor with `htop`
+- Add swap space if needed
+- Optimize Docker containers
 
 ---
 
-## 📞 Support
+## 📈 Scaling Considerations
 
-If you encounter issues:
-1. Check deployment logs first
-2. Verify all environment variables
-3. Test API endpoints individually
-4. Check database connections
+### Horizontal Scaling
+- Use load balancer (Nginx/HAProxy)
+- Deploy multiple backend instances
+- Use Redis for session storage
+
+### Database Scaling
+- MongoDB Atlas auto-scaling
+- Read replicas for heavy read workloads
+- Sharding for large datasets
+
+### CDN Integration
+- Cloudflare for global distribution
+- AWS CloudFront for static assets
+- Image optimization services
 
 ---
 
-## 🎉 Congratulations!
+## ✅ Deployment Checklist
 
-Your ResuScanX is now live and ready for production use! 
+### Pre-Deployment
+- [ ] All API keys obtained
+- [ ] MongoDB Atlas cluster created
+- [ ] Environment variables configured
+- [ ] CORS settings updated
+- [ ] Domain name configured (if applicable)
 
-**Frontend**: `https://resuscanx.vercel.app`  
-**Backend**: `https://your-backend.up.railway.app`  
-**Database**: MongoDB Atlas  
+### Post-Deployment
+- [ ] Health checks passing
+- [ ] SSL certificate installed
+- [ ] Monitoring setup
+- [ ] Backup strategy implemented
+- [ ] Performance optimizations applied
 
-Share your live URL and start helping people optimize their resumes! 🚀
+### Testing
+- [ ] User registration works
+- [ ] Resume upload works
+- [ ] AI analysis completes
+- [ ] Chat functionality works
+- [ ] Mobile responsiveness verified
+
+---
+
+**🎉 Congratulations! Your ResuScanX is now live and helping people get honest career feedback!**
+
+For support, create an issue on GitHub or contact: dheemanthm.official@gmail.com
