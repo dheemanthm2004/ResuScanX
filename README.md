@@ -86,7 +86,7 @@ npm run dev
 ### Recommended:
 
 * **Frontend**: Vercel
-* **Backend**: Railway
+* **Backend**: Render
 
 Set API keys in both platforms' dashboards. You can also deploy via Docker or VPS (see `DEPLOYMENT.md`).
 
