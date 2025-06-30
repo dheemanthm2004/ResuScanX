@@ -243,7 +243,7 @@ export default function HomePage() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {[
-                { num: '4', title: 'AI Providers', desc: 'OpenRouter, Mistral, Cohere & Gemini working together', gradient: 'from-violet-500 to-purple-600' },
+                { num: '4', title: 'AI Providers', desc: 'Gemini, OpenRouter, Mistral & Cohere for reliability', gradient: 'from-violet-500 to-purple-600' },
                 { num: '90%', title: 'ATS Success', desc: 'Real ATS compatibility analysis with actionable fixes', gradient: 'from-emerald-500 to-teal-600' },
                 { icon: '✨', title: 'Free Forever', desc: 'Core features always free, no hidden costs or limits', gradient: 'from-blue-500 to-cyan-600' },
                 { icon: '💬', title: 'AI Coach', desc: 'Personal career guidance powered by Gemini AI', gradient: 'from-pink-500 to-rose-600' }
@@ -326,10 +326,10 @@ export default function HomePage() {
           <p className="text-gray-600 mb-12 max-w-2xl mx-auto text-lg">Leveraging the latest in artificial intelligence and machine learning</p>
           <div className="flex flex-wrap justify-center gap-4">
             {[
+              { text: '✨ Google Gemini', colors: 'from-orange-100 to-orange-200 text-orange-700' },
               { text: '🤖 OpenRouter AI', colors: 'from-blue-100 to-blue-200 text-blue-700' },
               { text: '🧠 Mistral AI', colors: 'from-purple-100 to-purple-200 text-purple-700' },
               { text: '💎 Cohere NLP', colors: 'from-emerald-100 to-emerald-200 text-emerald-700' },
-              { text: '✨ Google Gemini', colors: 'from-orange-100 to-orange-200 text-orange-700' },
               { text: '📊 Advanced Analytics', colors: 'from-pink-100 to-pink-200 text-pink-700' }
             ].map((tech, index) => (
               <span 
