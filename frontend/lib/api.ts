@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-backend-url.com/api' 
+  ? 'https://resuscanx.onrender.com/api' 
   : 'http://localhost:12001/api';
 
 const api = axios.create({

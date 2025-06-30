@@ -2,7 +2,7 @@
 const nextConfig = {
   env: {
     API_URL: process.env.NODE_ENV === 'production' 
-      ? process.env.NEXT_PUBLIC_API_URL || 'https://your-backend-url.up.railway.app/api'
+      ? process.env.NEXT_PUBLIC_API_URL || 'https://resuscanx.onrender.com/api'
       : 'http://localhost:12001/api'
   },
   images: {
