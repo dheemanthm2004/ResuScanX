@@ -11,9 +11,20 @@ const atsRoutes = require('./routes/ats');
 const app = express();
 
 // Middleware
-app.use(cors());
+// Middleware
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://resuscanx.vercel.app'
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
+
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
+
 
 // Routes
 app.use('/api/auth', authRoutes);
