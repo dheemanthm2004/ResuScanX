@@ -81,7 +81,7 @@ export default function AnalysisDetailPage() {
                 }`}
               >
                 <MessageCircle className="h-4 w-4 mr-2" />
-                AI Assistant (Gemini)
+                AI Assistant (4 AI Providers)
               </button>
             </div>
           </div>

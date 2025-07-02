@@ -47,7 +47,13 @@ export default function LoginPage() {
             <div className="flex items-center">
               <div className="relative">
                 <div className="w-10 h-10 bg-gradient-to-br from-violet-600 via-purple-600 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-lg">R</span>
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+                    <path d="M14 2v6h6"/>
+                    <path d="M16 13H8"/>
+                    <path d="M16 17H8"/>
+                    <path d="M10 9H8"/>
+                  </svg>
                 </div>
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs font-bold">✓</span>
@@ -57,7 +63,7 @@ export default function LoginPage() {
                 <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
                   ResuScanX
                 </h1>
-                <p className="text-xs text-gray-500 -mt-1">AI Career Coach</p>
+                <p className="text-xs text-gray-500 -mt-1">Honest Career Analysis</p>
               </div>
             </div>
           </div>
