@@ -1,30 +1,10 @@
-const axios = require('axios');
+const AIProviders = require('./ai/providers');
 
 class ATSService {
   constructor() {
-    // Same AI provider rotation as aiService
-    this.aiProviders = [
-      { name: 'Gemini-1', key: process.env.GEMINI_API_KEY, type: 'gemini' },
-      { name: 'Gemini-2', key: process.env.GEMINI_API_KEY_new, type: 'gemini' },
-      { name: 'Mistral', key: process.env.MISTRAL_API_KEY, type: 'mistral' },
-      { name: 'Cohere', key: process.env.COHERE_API_KEY, type: 'cohere' },
-      { name: 'OpenRouter', key: process.env.OPEN_ROUTER_API_KEY, type: 'openrouter' }
-    ];
-    this.currentProviderIndex = 0;
+    this.providers = new AIProviders();
   }
 
-  getNextProvider() {
-    if (this.currentProviderIndex >= this.aiProviders.length) {
-      return null;
-    }
-    return this.aiProviders[this.currentProviderIndex++];
-  }
-
-  resetProviders() {
-    this.currentProviderIndex = 0;
-  }
-
-  // AI-powered ATS compatibility analysis with provider rotation
   async checkATSCompatibility(resumeText, jobDescription = '') {
     try {
       const aiAnalysis = await this.getAIATSAnalysis(resumeText, jobDescription);
@@ -96,37 +76,23 @@ JSON response:
   "parseability": number
 }`;
 
-    this.resetProviders();
+    this.providers.reset();
     
-    // Try all providers in priority order
-    while (this.currentProviderIndex < this.aiProviders.length) {
-      const provider = this.getNextProvider();
+    while (this.providers.currentIndex < this.providers.providers.length) {
+      const provider = this.providers.getNext();
       if (!provider || !provider.key) continue;
       
       try {
         console.log(`Trying ${provider.name} for ATS analysis...`);
-        let result = null;
+        const result = await this.providers.call(provider.type, prompt, provider.key);
         
-        switch (provider.type) {
-          case 'gemini':
-            result = await this.callGeminiATS(prompt, provider.key);
-            break;
-          case 'mistral':
-            result = await this.callMistralATS(prompt, provider.key);
-            break;
-          case 'cohere':
-            result = await this.callCohereATS(prompt, provider.key);
-            break;
-          case 'openrouter':
-            result = await this.callOpenRouterATS(prompt, provider.key);
-            break;
-        }
-        
-        if (result && result.score !== undefined) {
-          console.log(`${provider.name} ATS analysis successful!`);
-          const validated = this.validateATSResult(result);
-          validated.provider = provider.name;
-          return validated;
+        if (result) {
+          const validated = this.validateATSResult(this.parseATSResponse(result));
+          if (validated && validated.score !== undefined) {
+            console.log(`${provider.name} ATS analysis successful!`);
+            validated.provider = provider.name;
+            return validated;
+          }
         }
       } catch (error) {
         console.log(`${provider.name} ATS failed:`, error.message);
@@ -137,92 +103,8 @@ JSON response:
     throw new Error('All AI providers failed for ATS analysis');
   }
 
-  validateATSResult(result) {
-    // Ensure realistic scoring
-    let score = Math.min(Math.max(result.score || 50, 20), 90);
-    
-    // Apply realistic constraints
-    if (score > 80 && (!result.issues || result.issues.length === 0)) {
-      score = Math.min(score, 75); // Perfect scores are rare
-    }
-    
-    if (score < 30 && result.issues && result.issues.length < 3) {
-      score = Math.max(score, 35); // Very low scores need multiple issues
-    }
-    
-    return {
-      score,
-      issues: result.issues || [],
-      recommendations: result.recommendations || [],
-      summary: result.summary || this.generateATSSummary(score, result.issues?.length || 0),
-      keywordMatch: result.keywordMatch || Math.max(score - 20, 0),
-      parseability: result.parseability || Math.max(score - 10, 0)
-    };
-  }
-
-  async callGeminiATS(prompt, apiKey) {
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
-      { contents: [{ parts: [{ text: prompt }] }] },
-      { headers: { 'Content-Type': 'application/json' }, timeout: 18000 }
-    );
-    return this.parseATSResponse(response.data.candidates[0].content.parts[0].text);
-  }
-
-  async callMistralATS(prompt, apiKey) {
-    const response = await axios.post(
-      'https://api.mistral.ai/v1/chat/completions',
-      {
-        model: 'mistral-tiny',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 700,
-        temperature: 0.2
-      },
-      {
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        timeout: 18000
-      }
-    );
-    return this.parseATSResponse(response.data.choices[0].message.content);
-  }
-
-  async callCohereATS(prompt, apiKey) {
-    const response = await axios.post(
-      'https://api.cohere.ai/v1/generate',
-      {
-        model: 'command-light',
-        prompt: prompt,
-        max_tokens: 600,
-        temperature: 0.2
-      },
-      {
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        timeout: 18000
-      }
-    );
-    return this.parseATSResponse(response.data.generations[0].text);
-  }
-
-  async callOpenRouterATS(prompt, apiKey) {
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        model: 'meta-llama/llama-3.2-3b-instruct:free',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 700,
-        temperature: 0.2
-      },
-      {
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        timeout: 18000
-      }
-    );
-    return this.parseATSResponse(response.data.choices[0].message.content);
-  }
-
   parseATSResponse(response) {
     try {
-      // Try to parse as JSON first
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
@@ -237,38 +119,51 @@ JSON response:
       // Fallback to regex parsing
     }
 
-    // Extract score
-    const scoreMatch = response.match(/score["\s]*:?["\s]*(\d+)/i);
+    const scoreMatch = response.match(/score["\\s]*:?["\\s]*(\\d+)/i);
     const score = scoreMatch ? Math.min(parseInt(scoreMatch[1]), 100) : 50;
 
-    // Extract issues
-    const issuesMatch = response.match(/issues?["\s]*:?[\s]*\[([^\]]+)\]/i);
+    const issuesMatch = response.match(/issues?["\\s]*:?[\\s]*\\[([^\\]]+)\\]/i);
     const issues = issuesMatch ? 
-      issuesMatch[1].split(',').map(i => i.replace(/["\']/g, '').trim()).filter(i => i.length > 0) : [];
+      issuesMatch[1].split(',').map(i => i.replace(/["\\']/g, '').trim()).filter(i => i.length > 0) : [];
 
-    // Extract recommendations  
-    const recsMatch = response.match(/recommendations?["\s]*:?[\s]*\[([^\]]+)\]/i);
+    const recsMatch = response.match(/recommendations?["\\s]*:?[\\s]*\\[([^\\]]+)\\]/i);
     const recommendations = recsMatch ?
-      recsMatch[1].split(',').map(r => r.replace(/["\']/g, '').trim()).filter(r => r.length > 0) : [];
+      recsMatch[1].split(',').map(r => r.replace(/["\\']/g, '').trim()).filter(r => r.length > 0) : [];
 
-    // Extract summary
-    const summaryMatch = response.match(/summary["\s]*:?["\s]*([^"\n]+)/i);
+    const summaryMatch = response.match(/summary["\\s]*:?["\\s]*([^"\\n]+)/i);
     const summary = summaryMatch ? summaryMatch[1].trim() : this.generateATSSummary(score, issues.length);
 
     return { score, issues, recommendations, summary };
   }
 
+  validateATSResult(result) {
+    let score = Math.min(Math.max(result.score || 50, 20), 90);
+    
+    if (score > 80 && (!result.issues || result.issues.length === 0)) {
+      score = Math.min(score, 75);
+    }
+    
+    if (score < 30 && result.issues && result.issues.length < 3) {
+      score = Math.max(score, 35);
+    }
+    
+    return {
+      score,
+      issues: result.issues || [],
+      recommendations: result.recommendations || [],
+      summary: result.summary || this.generateATSSummary(score, result.issues?.length || 0),
+      keywordMatch: result.keywordMatch || Math.max(score - 20, 0),
+      parseability: result.parseability || Math.max(score - 10, 0)
+    };
+  }
 
-
-  // Realistic ATS technical validation
   performTechnicalChecks(resumeText) {
     const issues = [];
     const recommendations = [];
-    let score = 65; // Start with realistic baseline
+    let score = 65;
 
-    // CRITICAL: Contact Information (ATS must find this)
-    const hasEmail = /@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(resumeText);
-    const hasPhone = /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/.test(resumeText);
+    const hasEmail = /@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/.test(resumeText);
+    const hasPhone = /\\b\\d{3}[-.\\s]?\\d{3}[-.\\s]?\\d{4}\\b/.test(resumeText);
     
     if (!hasEmail) {
       issues.push('ATS cannot locate email address - will be rejected');
@@ -282,11 +177,10 @@ JSON response:
       score -= 15;
     }
 
-    // CRITICAL: Standard Section Headers
     const standardSections = {
-      'experience': /\b(experience|employment|work history|professional experience)\b/i,
-      'education': /\b(education|academic|degree|university|college)\b/i,
-      'skills': /\b(skills|technical skills|competencies|proficiencies)\b/i
+      'experience': /\\b(experience|employment|work history|professional experience)\\b/i,
+      'education': /\\b(education|academic|degree|university|college)\\b/i,
+      'skills': /\\b(skills|technical skills|competencies|proficiencies)\\b/i
     };
     
     Object.entries(standardSections).forEach(([section, regex]) => {
@@ -297,11 +191,10 @@ JSON response:
       }
     });
 
-    // PARSING KILLERS: Complex formatting indicators
     const complexFormatting = [
-      { pattern: /\|{2,}/, issue: 'Table formatting detected', penalty: 15 },
+      { pattern: /\\|{2,}/, issue: 'Table formatting detected', penalty: 15 },
       { pattern: /_{5,}/, issue: 'Underline formatting detected', penalty: 10 },
-      { pattern: /\*{3,}/, issue: 'Asterisk formatting detected', penalty: 8 },
+      { pattern: /\\*{3,}/, issue: 'Asterisk formatting detected', penalty: 8 },
       { pattern: /={3,}/, issue: 'Equals sign formatting detected', penalty: 8 }
     ];
     
@@ -313,9 +206,8 @@ JSON response:
       }
     });
 
-    // KEYWORD DENSITY: Too few = filtered out
     const actionVerbs = ['managed', 'developed', 'created', 'implemented', 'analyzed', 'designed', 'led', 'coordinated', 'built', 'improved'];
-    const verbCount = actionVerbs.filter(verb => new RegExp(`\\b${verb}`, 'i').test(resumeText)).length;
+    const verbCount = actionVerbs.filter(verb => new RegExp(`\\\\b${verb}`, 'i').test(resumeText)).length;
     
     if (verbCount < 3) {
       issues.push('Insufficient action verbs - ATS keyword matching will fail');
@@ -323,9 +215,8 @@ JSON response:
       score -= 12;
     }
 
-    // DATE FORMAT: ATS struggles with non-standard dates
-    const hasStandardDates = /\b(0[1-9]|1[0-2])\/(19|20)\d{2}\b/.test(resumeText) || 
-                            /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(19|20)\d{2}\b/i.test(resumeText);
+    const hasStandardDates = /\\b(0[1-9]|1[0-2])\\/(19|20)\\d{2}\\b/.test(resumeText) || 
+                            /\\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+(19|20)\\d{2}\\b/i.test(resumeText);
     
     if (!hasStandardDates && resumeText.length > 500) {
       issues.push('Non-standard date formats detected');
@@ -333,7 +224,6 @@ JSON response:
       score -= 8;
     }
 
-    // CONTENT LENGTH: Too short = insufficient data
     if (resumeText.length < 800) {
       issues.push('Resume too brief - ATS needs more content to parse effectively');
       recommendations.push('Expand descriptions with specific achievements and metrics');
@@ -341,14 +231,12 @@ JSON response:
     }
 
     return {
-      atsScore: Math.max(Math.min(score, 85), 15), // Realistic range
+      atsScore: Math.max(Math.min(score, 85), 15),
       issues,
       recommendations,
       summary: this.generateATSSummary(Math.max(Math.min(score, 85), 15), issues.length)
     };
   }
-
-
 
   generateATSSummary(score, issueCount) {
     if (score >= 75) {
@@ -362,7 +250,6 @@ JSON response:
     }
   }
 
-  // Comprehensive ATS tips for users
   getATSTips() {
     return [
       '📄 Use standard fonts: Arial, Calibri, Times New Roman (10-12pt)',

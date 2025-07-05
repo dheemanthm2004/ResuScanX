@@ -64,17 +64,28 @@
 ```
 resuscan_a/
 ├── backend/
-│   ├── routes/       → API endpoints (auth, analysis, chat, ats)
-│   ├── models/       → MongoDB schemas (User, Analysis)
-│   ├── services/     → AI & ATS processing logic
-│   ├── middleware/   → JWT authentication
-│   └── uploads/      → Temporary PDF storage
+│   ├── routes/           → API endpoints (auth, analysis, chat, ats)
+│   ├── models/           → MongoDB schemas (User, Analysis)
+│   ├── services/
+│   │   ├── ai/           → Modular AI services
+│   │   │   ├── providers.js  → AI API calls (Gemini, Mistral, etc.)
+│   │   │   ├── scorer.js     → Realistic recruiter scoring
+│   │   │   ├── prompts.js    → AI prompt templates
+│   │   │   └── skillExtractor.js → Skill extraction logic
+│   │   ├── aiService.js  → Main AI orchestrator
+│   │   └── atsService.js → ATS compatibility checker
+│   ├── middleware/       → JWT authentication
+│   └── uploads/          → Temporary PDF storage
 │
 ├── frontend/
-│   ├── app/          → Next.js 14 App Router pages
-│   ├── components/   → Reusable UI components
-│   ├── lib/          → API client configuration
-│   └── types/        → TypeScript definitions
+│   ├── app/              → Next.js 14 App Router pages
+│   ├── components/
+│   │   ├── dashboard/    → Dashboard-specific components
+│   │   ├── analysis/     → Analysis result components
+│   │   ├── ui/           → Reusable UI components
+│   │   └── charts/       → Chart components
+│   ├── lib/              → API client configuration
+│   └── types/            → TypeScript definitions
 ```
 
 ---
