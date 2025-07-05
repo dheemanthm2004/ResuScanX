@@ -81,7 +81,7 @@ export default function AnalysisDetailPage() {
                 }`}
               >
                 <MessageCircle className="h-4 w-4 mr-2" />
-                AI Assistant (4 AI Providers)
+                AI Career Coach
               </button>
             </div>
           </div>

@@ -18,7 +18,7 @@
 
 ### 🤖 Multi-AI Analysis Engine
 - **4 AI Providers**: Gemini → Mistral → Cohere → OpenRouter
-- **Intelligent Failover**: Automatic provider rotation for 99.9% uptime
+- **Intelligent Failover**: Automatic provider rotation for maximum uptime
 - **Realistic Scoring**: 20-95% range matching real recruiter expectations
 - **Role-Level Detection**: Entry/Junior/Mid/Senior with appropriate criteria
 
@@ -52,7 +52,7 @@
 |-----------|------------------------------------------|
 | Frontend  | Next.js 14, TypeScript, Tailwind CSS    |
 | Backend   | Node.js, Express.js, MongoDB, JWT       |
-| AI/ML     | Gemini (2), Mistral, Cohere, OpenRouter |
+| AI/ML     | Gemini, Mistral, Cohere, OpenRouter |
 | Charts    | Chart.js, react-chartjs-2               |
 | Parsing   | pdf-parse, multer                        |
 | Hosting   | Vercel (frontend), Render (backend)      |
@@ -113,7 +113,7 @@ npm run dev
 - **Red Flag Caps**: Automatic score limits for major issues
 
 ### Multi-Provider Reliability
-- **Primary**: Gemini (2 API keys for load distribution)
+- **Primary**: Gemini AI for detailed analysis
 - **Fallbacks**: Mistral → Cohere → OpenRouter
 - **Timeout Handling**: 18-20 second timeouts with graceful failover
 - **Error Recovery**: Intelligent retry logic across providers
@@ -150,11 +150,10 @@ PORT=12001
 NODE_ENV=production
 
 # AI Providers (Priority Order)
-GEMINI_API_KEY=your_primary_gemini_key
-GEMINI_API_KEY_new=your_secondary_gemini_key
-MISTRAL_API_KEY=your_mistral_key
-COHERE_API_KEY=your_cohere_key
-OPEN_ROUTER_API_KEY=your_openrouter_key
+GEMINI_API_KEY=your_gemini_api_key
+MISTRAL_API_KEY=your_mistral_api_key
+COHERE_API_KEY=your_cohere_api_key
+OPEN_ROUTER_API_KEY=your_openrouter_api_key
 
 # Database & Auth
 MONGO_URI=your_mongodb_connection_string
@@ -173,7 +172,7 @@ NEXT_PUBLIC_API_URL=http://localhost:12001
 ## 🎨 Key Differentiators
 
 - **Production-Ready**: Built for real interviews and hiring scenarios
-- **Multi-AI Reliability**: 5 providers ensure 99.9% uptime
+- **Multi-AI Reliability**: 4 providers ensure maximum uptime
 - **Realistic Scoring**: Matches actual recruiter evaluation criteria
 - **ATS Accuracy**: Simulates real parsing failures and success rates
 - **Interview-Ready**: Comprehensive reports suitable for hiring managers
