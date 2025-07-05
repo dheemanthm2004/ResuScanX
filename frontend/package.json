@@ -16,7 +16,7 @@
     "autoprefixer": "^10.0.1",
     "axios": "^1.5.0",
     "chart.js": "^4.5.0",
-    "lucide-react": "^0.290.0",
+    "lucide-react": "^0.522.0",
     "next": "14.0.0",
     "postcss": "^8",
     "react": "^18",
