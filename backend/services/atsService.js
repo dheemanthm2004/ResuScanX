@@ -1,13 +1,33 @@
 const axios = require('axios');
 
 class ATSService {
-  // AI-powered ATS compatibility analysis
+  constructor() {
+    // Same AI provider rotation as aiService
+    this.aiProviders = [
+      { name: 'Gemini-1', key: process.env.GEMINI_API_KEY, type: 'gemini' },
+      { name: 'Gemini-2', key: process.env.GEMINI_API_KEY_new, type: 'gemini' },
+      { name: 'Mistral', key: process.env.MISTRAL_API_KEY, type: 'mistral' },
+      { name: 'Cohere', key: process.env.COHERE_API_KEY, type: 'cohere' },
+      { name: 'OpenRouter', key: process.env.OPEN_ROUTER_API_KEY, type: 'openrouter' }
+    ];
+    this.currentProviderIndex = 0;
+  }
+
+  getNextProvider() {
+    if (this.currentProviderIndex >= this.aiProviders.length) {
+      return null;
+    }
+    return this.aiProviders[this.currentProviderIndex++];
+  }
+
+  resetProviders() {
+    this.currentProviderIndex = 0;
+  }
+
+  // AI-powered ATS compatibility analysis with provider rotation
   async checkATSCompatibility(resumeText, jobDescription = '') {
     try {
-      // Use AI to analyze ATS compatibility
       const aiAnalysis = await this.getAIATSAnalysis(resumeText, jobDescription);
-      
-      // Combine AI analysis with technical checks for better accuracy
       const technicalChecks = this.performTechnicalChecks(resumeText);
       
       return {
@@ -15,91 +35,106 @@ class ATSService {
         issues: [...(aiAnalysis.issues || []), ...technicalChecks.issues],
         recommendations: [...(aiAnalysis.recommendations || []), ...technicalChecks.recommendations],
         summary: aiAnalysis.summary || technicalChecks.summary,
-        aiPowered: !!aiAnalysis.score
+        aiPowered: !!aiAnalysis.score,
+        aiProvider: aiAnalysis.provider || 'Technical Analysis'
       };
     } catch (error) {
       console.log('AI ATS analysis failed, using technical checks:', error.message);
-      // Fallback to technical checks if AI fails
       const technicalChecks = this.performTechnicalChecks(resumeText);
       return {
         ...technicalChecks,
-        aiPowered: false
+        aiPowered: false,
+        aiProvider: 'Fallback Analysis'
       };
     }
   }
 
   async getAIATSAnalysis(resumeText, jobDescription) {
-    const prompt = `You are an ATS (Applicant Tracking System) parsing expert with 10+ years experience. Analyze this resume like a REAL ATS system would.
+    const prompt = `You are an ATS parsing expert analyzing resume compatibility. Be realistic about ATS limitations.
 
-RESUME CONTENT:
-${resumeText.substring(0, 3000)}
+RESUME:
+${resumeText.substring(0, 3500)}
 
-${jobDescription ? `TARGET JOB:
-${jobDescription.substring(0, 1000)}
+${jobDescription ? `JOB POSTING:
+${jobDescription.substring(0, 1200)}
 
-` : ''}CRITICAL ATS ANALYSIS - BE BRUTALLY HONEST:
+` : ''}ATS REALITY CHECK:
 
-1. PARSING ABILITY (40% of score):
-   - Can ATS extract contact info cleanly?
-   - Are section headers standard and recognizable?
-   - Is text readable without complex formatting?
-   - Are dates in parseable format?
+1. PARSING SUCCESS (40%):
+   - Contact info extractable?
+   - Standard section headers?
+   - Clean text without complex formatting?
+   - Readable dates and structure?
 
-2. KEYWORD MATCHING (35% of score):
-   - Does resume contain job-relevant keywords?
-   - Are skills mentioned in standard terminology?
-   - Are job titles using industry-standard names?
-   - Is there keyword stuffing (penalty)?
+2. KEYWORD OPTIMIZATION (35%):
+   - Job-relevant keywords present?
+   - Industry-standard terminology?
+   - Natural keyword integration?
+   - Avoiding keyword stuffing?
 
-3. STRUCTURE & FORMAT (25% of score):
-   - Standard resume sections present?
-   - Logical flow and organization?
-   - No graphics/tables that break parsing?
-   - Consistent formatting throughout?
+3. FORMAT COMPATIBILITY (25%):
+   - Standard resume structure?
+   - No parsing-breaking elements?
+   - Consistent formatting?
+   - ATS-friendly layout?
 
-REAL ATS BEHAVIOR:
-- ATS systems FAIL to parse 75% of resumes properly
-- Complex formatting = automatic rejection
-- Missing keywords = filtered out immediately
-- Non-standard sections = parsing errors
+REAL ATS STATISTICS:
+- 75% of resumes fail initial ATS parsing
+- Complex formatting causes 60% of rejections
+- Missing keywords filter out 80% of candidates
+- Only 25% of resumes score above 70%
 
-BE REALISTIC: Most resumes score 40-60% in real ATS systems.
+Be BRUTALLY realistic - most resumes score 35-65%.
 
-Respond in JSON:
+JSON response:
 {
-  "score": number (20-90, be realistic - most should be 40-70),
-  "issues": ["specific parsing problems ATS would have"],
-  "recommendations": ["exact fixes to pass ATS parsing"],
-  "summary": "honest assessment of ATS parsing likelihood",
-  "keywordMatch": number (0-100),
-  "parseability": number (0-100)
+  "score": number (25-85, realistic range),
+  "issues": ["specific ATS parsing problems"],
+  "recommendations": ["actionable fixes for ATS compatibility"],
+  "summary": "honest ATS compatibility assessment",
+  "keywordDensity": number,
+  "parseability": number
 }`;
 
-    // Use Gemini first (best for detailed analysis)
-    try {
-      console.log('Using Gemini for intelligent ATS analysis...');
-      const result = await this.tryGeminiATS(prompt);
-      if (result && result.score !== undefined) {
-        console.log('Gemini ATS analysis successful!');
-        return this.validateATSResult(result);
+    this.resetProviders();
+    
+    // Try all providers in priority order
+    while (this.currentProviderIndex < this.aiProviders.length) {
+      const provider = this.getNextProvider();
+      if (!provider || !provider.key) continue;
+      
+      try {
+        console.log(`Trying ${provider.name} for ATS analysis...`);
+        let result = null;
+        
+        switch (provider.type) {
+          case 'gemini':
+            result = await this.callGeminiATS(prompt, provider.key);
+            break;
+          case 'mistral':
+            result = await this.callMistralATS(prompt, provider.key);
+            break;
+          case 'cohere':
+            result = await this.callCohereATS(prompt, provider.key);
+            break;
+          case 'openrouter':
+            result = await this.callOpenRouterATS(prompt, provider.key);
+            break;
+        }
+        
+        if (result && result.score !== undefined) {
+          console.log(`${provider.name} ATS analysis successful!`);
+          const validated = this.validateATSResult(result);
+          validated.provider = provider.name;
+          return validated;
+        }
+      } catch (error) {
+        console.log(`${provider.name} ATS failed:`, error.message);
+        continue;
       }
-    } catch (error) {
-      console.log('Gemini ATS failed:', error.message);
-    }
-
-    // Fallback to OpenRouter
-    try {
-      console.log('Trying OpenRouter for ATS analysis...');
-      const result = await this.tryOpenRouterATS(prompt);
-      if (result && result.score !== undefined) {
-        console.log('OpenRouter ATS analysis successful!');
-        return this.validateATSResult(result);
-      }
-    } catch (error) {
-      console.log('OpenRouter ATS failed:', error.message);
     }
     
-    throw new Error('AI ATS analysis failed');
+    throw new Error('All AI providers failed for ATS analysis');
   }
 
   validateATSResult(result) {
@@ -125,83 +160,64 @@ Respond in JSON:
     };
   }
 
-  async tryGeminiATS(prompt) {
+  async callGeminiATS(prompt, apiKey) {
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        contents: [{ parts: [{ text: prompt }] }]
-      },
-      {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 15000
-      }
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+      { contents: [{ parts: [{ text: prompt }] }] },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 18000 }
     );
-
-    const aiResponse = response.data.candidates[0].content.parts[0].text;
-    return this.parseATSResponse(aiResponse);
+    return this.parseATSResponse(response.data.candidates[0].content.parts[0].text);
   }
 
-  async tryOpenRouterATS(prompt) {
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        model: 'meta-llama/llama-3.2-3b-instruct:free',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 800,
-        temperature: 0.3
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.OPEN_ROUTER_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 15000
-      }
-    );
-    
-    return this.parseATSResponse(response.data.choices[0].message.content);
-  }
-
-  async tryMistralATS(prompt) {
+  async callMistralATS(prompt, apiKey) {
     const response = await axios.post(
       'https://api.mistral.ai/v1/chat/completions',
       {
         model: 'mistral-tiny',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 600,
-        temperature: 0.3
+        max_tokens: 700,
+        temperature: 0.2
       },
       {
-        headers: {
-          'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 15000
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        timeout: 18000
       }
     );
-    
     return this.parseATSResponse(response.data.choices[0].message.content);
   }
 
-  async tryCohereATS(prompt) {
+  async callCohereATS(prompt, apiKey) {
     const response = await axios.post(
       'https://api.cohere.ai/v1/generate',
       {
         model: 'command-light',
         prompt: prompt,
-        max_tokens: 500,
-        temperature: 0.3
+        max_tokens: 600,
+        temperature: 0.2
       },
       {
-        headers: {
-          'Authorization': `Bearer ${process.env.COHERE_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 15000
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        timeout: 18000
       }
     );
-    
     return this.parseATSResponse(response.data.generations[0].text);
+  }
+
+  async callOpenRouterATS(prompt, apiKey) {
+    const response = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model: 'meta-llama/llama-3.2-3b-instruct:free',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 700,
+        temperature: 0.2
+      },
+      {
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        timeout: 18000
+      }
+    );
+    return this.parseATSResponse(response.data.choices[0].message.content);
   }
 
   parseATSResponse(response) {

@@ -3,6 +3,31 @@ const natural = require('natural');
 const atsService = require('./atsService');
 
 class AIService {
+  constructor() {
+    // AI API Keys with priority order: Gemini (2) → Mistral → Cohere → OpenRouter
+    this.aiProviders = [
+      { name: 'Gemini-1', key: process.env.GEMINI_API_KEY, type: 'gemini' },
+      { name: 'Gemini-2', key: process.env.GEMINI_API_KEY_new, type: 'gemini' },
+      { name: 'Mistral', key: process.env.MISTRAL_API_KEY, type: 'mistral' },
+      { name: 'Cohere', key: process.env.COHERE_API_KEY, type: 'cohere' },
+      { name: 'OpenRouter', key: process.env.OPEN_ROUTER_API_KEY, type: 'openrouter' }
+    ];
+    this.currentProviderIndex = 0;
+  }
+
+  // Get next available AI provider
+  getNextProvider() {
+    if (this.currentProviderIndex >= this.aiProviders.length) {
+      return null; // All providers exhausted
+    }
+    return this.aiProviders[this.currentProviderIndex++];
+  }
+
+  // Reset provider rotation
+  resetProviders() {
+    this.currentProviderIndex = 0;
+  }
+
   // Extract skills using NLP
   extractSkills(text) {
     const skillKeywords = [
@@ -52,99 +77,108 @@ class AIService {
     return (intersection.size / union.size) * 100;
   }
 
-  // Generate detailed AI reports with full resume and JD analysis
+  // Generate detailed AI reports with provider rotation
   async generateAIReport(resumeText, jobDescription, analysis) {
-    const detailedPrompt = `COMPREHENSIVE RESUME ANALYSIS REPORT
+    const detailedPrompt = `HIRING MANAGER REPORT - COMPREHENSIVE CANDIDATE ASSESSMENT
 
-FULL RESUME CONTENT:
+CANDIDATE RESUME:
 ${resumeText.substring(0, 4000)}
 
-FULL JOB DESCRIPTION:
+POSITION REQUIREMENTS:
 ${jobDescription.substring(0, 2500)}
 
-CURRENT ANALYSIS SUMMARY:
+INITIAL SCREENING RESULTS:
 - Match Score: ${analysis.matchScore}%
-- Skills Match: ${analysis.skillsMatch?.join(', ') || 'None'}
-- Skills Gap: ${analysis.skillsGap?.join(', ') || 'None'}
+- Role Level: ${analysis.roleLevel}
+- Critical Skills: ${analysis.mustHaveSkills?.matched?.join(', ') || 'None'}
+- Missing Skills: ${analysis.mustHaveSkills?.missing?.join(', ') || 'None'}
+- Experience Gap: ${analysis.experienceData?.gap || 0} years
 - Verdict: ${analysis.verdict}
 
-Provide a DETAILED, COMPREHENSIVE analysis covering:
+Provide a DETAILED HIRING ASSESSMENT (1200+ words) covering:
 
-1. EXPERIENCE ANALYSIS (200+ words):
-   - Analyze candidate's work history in detail
-   - Compare with job requirements
-   - Identify experience gaps or strengths
-   - Assess career progression
+1. EXECUTIVE SUMMARY (150 words):
+   - Overall hiring recommendation
+   - Key strengths and concerns
+   - Risk assessment for this hire
 
-2. SKILLS ASSESSMENT (200+ words):
-   - Deep dive into technical skills match
-   - Evaluate skill levels and proficiency
-   - Identify critical missing skills
-   - Suggest skill development priorities
+2. TECHNICAL COMPETENCY ANALYSIS (300 words):
+   - Detailed skill-by-skill evaluation
+   - Proficiency level assessment
+   - Technology stack alignment
+   - Learning curve estimation
 
-3. EDUCATION & QUALIFICATIONS (150+ words):
-   - Review educational background
-   - Assess relevance to role requirements
-   - Identify certification needs
-   - Evaluate academic achievements
+3. EXPERIENCE & CAREER PROGRESSION (250 words):
+   - Work history relevance
+   - Career trajectory analysis
+   - Leadership/mentoring evidence
+   - Industry experience fit
 
-4. ROLE SUITABILITY (200+ words):
-   - Overall fit for the specific position
-   - Seniority level appropriateness
-   - Cultural and team fit assessment
-   - Growth potential in the role
+4. ROLE READINESS ASSESSMENT (200 words):
+   - Day-1 productivity potential
+   - Onboarding time estimate
+   - Team integration likelihood
+   - Growth potential in role
 
-5. ACTIONABLE RECOMMENDATIONS (200+ words):
-   - Specific steps to improve candidacy
-   - Timeline for skill development
-   - Alternative career paths if unsuitable
-   - Interview preparation advice
+5. RISK FACTORS & MITIGATION (200 words):
+   - Potential hiring risks
+   - Skill gap mitigation strategies
+   - Success probability
+   - Alternative role considerations
 
-6. HONEST VERDICT (100+ words):
-   - Final recommendation (Hire/Don't Hire/Maybe)
-   - Key reasons for decision
-   - Probability of success in role
+6. FINAL HIRING DECISION (100 words):
+   - Clear HIRE/NO HIRE/MAYBE recommendation
+   - Salary band suggestion
+   - Interview focus areas
+   - Next steps
 
-Total response should be 1000+ words. Be detailed, specific, and reference actual content from the resume and job description.`;
+Be brutally honest like a real hiring manager. Reference specific resume content.`;
 
-    // Use only Gemini for detailed reports (most reliable)
-    console.log('Generating detailed report with Gemini...');
-    try {
-      const aiReport = await this.tryDetailedGemini(detailedPrompt);
-      if (aiReport) {
-        console.log('Gemini detailed report successful!');
-        return {
-          aiReport,
-          fallbackReport: this.generateFallbackReport(analysis),
-          aiProvider: 'Gemini AI Analysis'
-        };
-      }
-    } catch (error) {
-      console.log('Gemini detailed report failed:', error.message);
-    }
+    this.resetProviders();
     
-    // Only try OpenRouter as backup for detailed reports
-    try {
-      console.log('Trying OpenRouter for detailed report...');
-      const aiReport = await this.tryDetailedOpenRouter(detailedPrompt);
-      if (aiReport) {
-        console.log('OpenRouter detailed report successful!');
-        return {
-          aiReport,
-          fallbackReport: this.generateFallbackReport(analysis),
-          aiProvider: 'OpenRouter AI Analysis'
-        };
+    // Try all providers for detailed reports
+    while (this.currentProviderIndex < this.aiProviders.length) {
+      const provider = this.getNextProvider();
+      if (!provider || !provider.key) continue;
+      
+      try {
+        console.log(`Generating detailed report with ${provider.name}...`);
+        let aiReport = null;
+        
+        switch (provider.type) {
+          case 'gemini':
+            aiReport = await this.callGeminiAPI(detailedPrompt, provider.key);
+            break;
+          case 'mistral':
+            aiReport = await this.callMistralAPI(detailedPrompt, provider.key);
+            break;
+          case 'cohere':
+            aiReport = await this.callCohereAPI(detailedPrompt, provider.key);
+            break;
+          case 'openrouter':
+            aiReport = await this.callOpenRouterAPI(detailedPrompt, provider.key);
+            break;
+        }
+        
+        if (aiReport && aiReport.length > 500) {
+          console.log(`${provider.name} detailed report successful!`);
+          return {
+            aiReport,
+            fallbackReport: this.generateFallbackReport(analysis),
+            aiProvider: `${provider.name} Detailed Analysis`
+          };
+        }
+      } catch (error) {
+        console.log(`${provider.name} detailed report failed:`, error.message);
+        continue;
       }
-    } catch (error) {
-      console.log('OpenRouter detailed report failed:', error.message);
     }
 
-    // All AI providers failed
-    console.log('All AI providers failed for detailed report');
+    console.log('All providers failed for detailed report');
     return {
-      aiReport: '🤖 AI analysis temporarily unavailable - all providers failed',
+      aiReport: '🤖 AI detailed analysis temporarily unavailable - all providers exhausted',
       fallbackReport: this.generateFallbackReport(analysis),
-      aiProvider: 'Intelligent Fallback'
+      aiProvider: 'Intelligent Fallback System'
     };
   }
 
@@ -225,26 +259,41 @@ Total response should be 1000+ words. Be detailed, specific, and reference actua
 
 
   async chatWithAI(context) {
-    try {
-      const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
-        {
-          contents: [{
-            parts: [{ text: context }]
-          }]
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          timeout: 10000
+    this.resetProviders();
+    
+    // Try providers in order for chat
+    while (this.currentProviderIndex < this.aiProviders.length) {
+      const provider = this.getNextProvider();
+      if (!provider || !provider.key) continue;
+      
+      try {
+        let response = null;
+        
+        switch (provider.type) {
+          case 'gemini':
+            response = await this.callGeminiAPI(context, provider.key);
+            break;
+          case 'mistral':
+            response = await this.callMistralAPI(context, provider.key);
+            break;
+          case 'cohere':
+            response = await this.callCohereAPI(context, provider.key);
+            break;
+          case 'openrouter':
+            response = await this.callOpenRouterAPI(context, provider.key);
+            break;
         }
-      );
-      return response.data.candidates[0].content.parts[0].text;
-    } catch (error) {
-      console.log('Gemini chat error:', error.response?.data || error.message);
-      return "I'm here to help with your resume analysis! The AI is currently busy, but I can still provide general career advice.";
+        
+        if (response && response.length > 10) {
+          return response;
+        }
+      } catch (error) {
+        console.log(`${provider.name} chat failed:`, error.message);
+        continue;
+      }
     }
+    
+    return "I'm here to help with your resume analysis! All AI providers are currently busy, but I can still provide general career advice based on your analysis results.";
   }
 
  generateFallbackReport(analysis) {
@@ -317,112 +366,174 @@ ${analysis.recommendations.map(rec => `• ${rec}`).join('\n')}
     return this.getFallbackAnalysis(resumeText, jobDescription);
   }
 
-  // AI-powered comprehensive analysis using multiple providers
+  // AI-powered comprehensive analysis using multiple providers with rotation
   async getComprehensiveAIAnalysis(resumeText, jobDescription) {
-    console.log('Starting AI analysis...');
+    console.log('Starting AI analysis with provider rotation...');
+    this.resetProviders();
     
-    // Store resume and JD for use in parsing
-    this.currentResumeText = resumeText;
-    this.currentJobDescription = jobDescription;
-    const prompt = `You are an experienced technical recruiter with deep understanding of hiring nuances. Analyze this resume intelligently.
+    const prompt = `You are an experienced technical recruiter analyzing candidates for real hiring decisions. Be realistic and thorough.
 
 RESUME:
-${resumeText.substring(0, 3000)}
+${resumeText.substring(0, 3500)}
 
 JOB DESCRIPTION:
-${jobDescription.substring(0, 2000)}
+${jobDescription.substring(0, 2500)}
 
-INTELLIGENT ANALYSIS FRAMEWORK:
+RECRUITER ANALYSIS FRAMEWORK:
 
-1. ROLE LEVEL DETECTION:
-   - Intern/Entry: Personal projects count heavily, lower experience bar
-   - Junior (0-2 years): Focus on core skills, learning ability
-   - Mid (2-5 years): Balance of skills + experience
-   - Senior (5+ years): Leadership, architecture, mentoring
+1. ROLE LEVEL ASSESSMENT:
+   - Entry/Intern: 0-1 years, focus on potential and projects
+   - Junior: 1-3 years, core skills + learning ability
+   - Mid: 3-6 years, proven experience + technical depth
+   - Senior: 6+ years, leadership + architecture + mentoring
 
-2. SKILL PRIORITY PARSING:
-   - MUST-HAVE: "required", "essential", "must have"
-   - PREFERRED: "preferred", "desired", "nice to have"
-   - BONUS: "bonus", "plus", "additional"
-   - Weight: Must-have (100%), Preferred (60%), Bonus (20%)
+2. SKILL CATEGORIZATION (from JD):
+   - CRITICAL: "required", "must have", "essential" (100% weight)
+   - IMPORTANT: "preferred", "desired", "should have" (70% weight)
+   - NICE-TO-HAVE: "bonus", "plus", "additional" (30% weight)
 
-3. SKILL RELATIONSHIPS:
-   - React ↔ Next.js, Vue (related frontend)
-   - Node.js ↔ Express, NestJS (related backend)
-   - SQL ↔ PostgreSQL, MySQL (related databases)
-   - Give 70% credit for related skills
+3. SKILL RELATIONSHIPS & TRANSFERABILITY:
+   - React ↔ Vue, Angular (70% credit)
+   - Node.js ↔ Express, Fastify (80% credit)
+   - AWS ↔ Azure, GCP (60% credit)
+   - SQL ↔ PostgreSQL, MySQL (90% credit)
 
-4. PROJECT DEPTH ANALYSIS:
-   - Look for: "built", "architected", "scaled", "led"
-   - Scale indicators: "users", "requests", "data"
-   - Architecture terms: "microservices", "distributed", "cloud"
+4. EXPERIENCE VALIDATION:
+   - Years mentioned vs role requirements
+   - Project complexity and scale
+   - Leadership/mentoring evidence
+   - Industry relevance
 
-5. SOFT SKILLS MATCHING:
-   - Communication, leadership, problem-solving
-   - Match resume phrases to JD requirements
+5. RED FLAGS:
+   - Student applying for senior roles
+   - No relevant experience for mid+ roles
+   - Missing ALL critical skills
+   - Overqualified (senior applying for junior)
 
-6. PROBABILISTIC VERDICTS:
-   - 85%+: "Strong fit - recommend interview"
-   - 70-84%: "Good fit - some gaps addressable"
-   - 50-69%: "Partial fit - significant ramp-up needed"
-   - <50%: "Poor fit - major gaps"
+6. REALISTIC SCORING:
+   - 90-95%: Perfect fit (rare)
+   - 80-89%: Strong candidate
+   - 65-79%: Good fit with minor gaps
+   - 45-64%: Partial fit, needs development
+   - 20-44%: Poor fit, major gaps
+   - <20%: Not suitable
 
-Respond in JSON:
+Respond ONLY in valid JSON:
 {
-  "matchScore": number (realistic 40-90% range),
-  "roleLevel": "intern/junior/mid/senior",
+  "matchScore": number,
+  "roleLevel": "entry/junior/mid/senior",
   "mustHaveSkills": {"matched": [], "missing": []},
   "preferredSkills": {"matched": [], "missing": []},
-  "relatedSkills": ["skill with 70% credit"],
-  "projectDepth": "assessment of technical sophistication",
-  "softSkills": {"matched": [], "missing": []},
-  "experienceGap": "nuanced experience assessment",
-  "recommendations": ["prioritized, actionable advice"],
-  "verdict": "Strong fit/Good fit/Partial fit/Poor fit",
-  "summary": "recruiter-style assessment"
+  "relatedSkills": [],
+  "experienceYears": {"candidate": number, "required": number, "gap": number},
+  "projectComplexity": "basic/intermediate/advanced",
+  "redFlags": [],
+  "strengths": [],
+  "recommendations": [],
+  "verdict": "Strong fit/Good fit/Partial fit/Poor fit/Not suitable",
+  "recruiterNotes": "honest assessment for hiring manager"
 }`;
 
-    // Use Gemini as primary, others as fallback only
-    try {
-      console.log('Using Gemini AI for analysis...');
-      const result = await this.getGeminiAnalysis(prompt, resumeText, jobDescription);
-      if (result) {
-        console.log('Gemini analysis successful!');
-        return result;
+    // Try all providers in priority order
+    while (this.currentProviderIndex < this.aiProviders.length) {
+      const provider = this.getNextProvider();
+      if (!provider || !provider.key) continue;
+      
+      try {
+        console.log(`Trying ${provider.name}...`);
+        let result = null;
+        
+        switch (provider.type) {
+          case 'gemini':
+            result = await this.callGeminiAPI(prompt, provider.key);
+            break;
+          case 'mistral':
+            result = await this.callMistralAPI(prompt, provider.key);
+            break;
+          case 'cohere':
+            result = await this.callCohereAPI(prompt, provider.key);
+            break;
+          case 'openrouter':
+            result = await this.callOpenRouterAPI(prompt, provider.key);
+            break;
+        }
+        
+        if (result) {
+          const parsed = this.processAIResponse(result, resumeText, jobDescription, provider.name);
+          if (parsed) {
+            console.log(`${provider.name} analysis successful!`);
+            return parsed;
+          }
+        }
+      } catch (error) {
+        console.log(`${provider.name} failed:`, error.message);
+        continue;
       }
-    } catch (error) {
-      console.log('Gemini failed:', error.message);
     }
     
     console.log('All AI providers failed');
-    return null; // All AI providers failed
+    return null;
   }
 
-  async getGeminiAnalysis(prompt, resumeText, jobDescription) {
-    try {
-      console.log('Making Gemini API call...');
-      const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
-        {
-          contents: [{ parts: [{ text: prompt }] }]
-        },
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 15000
-        }
-      );
+  // Individual API callers
+  async callGeminiAPI(prompt, apiKey) {
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+      { contents: [{ parts: [{ text: prompt }] }] },
+      { headers: { 'Content-Type': 'application/json' }, timeout: 20000 }
+    );
+    return response.data.candidates[0].content.parts[0].text;
+  }
 
-      console.log('Gemini API response received');
-      const aiResponse = response.data.candidates[0].content.parts[0].text;
-      console.log('AI Response:', aiResponse.substring(0, 200) + '...');
-      
-      const parsed = this.processAIResponse(aiResponse, resumeText, jobDescription);
-      console.log('Parsed result:', parsed ? 'Success' : 'Failed');
-      return parsed;
-    } catch (error) {
-      console.log('Gemini API error:', error.response?.data || error.message);
-      throw error;
-    }
+  async callMistralAPI(prompt, apiKey) {
+    const response = await axios.post(
+      'https://api.mistral.ai/v1/chat/completions',
+      {
+        model: 'mistral-tiny',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1000,
+        temperature: 0.3
+      },
+      {
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        timeout: 20000
+      }
+    );
+    return response.data.choices[0].message.content;
+  }
+
+  async callCohereAPI(prompt, apiKey) {
+    const response = await axios.post(
+      'https://api.cohere.ai/v1/generate',
+      {
+        model: 'command-light',
+        prompt: prompt,
+        max_tokens: 800,
+        temperature: 0.3
+      },
+      {
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        timeout: 20000
+      }
+    );
+    return response.data.generations[0].text;
+  }
+
+  async callOpenRouterAPI(prompt, apiKey) {
+    const response = await axios.post(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        model: 'meta-llama/llama-3.2-3b-instruct:free',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1000,
+        temperature: 0.3
+      },
+      {
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        timeout: 20000
+      }
+    );
+    return response.data.choices[0].message.content;
   }
 
   async tryOpenRouterAnalysis(prompt, resumeText, jobDescription) {
@@ -485,20 +596,20 @@ Respond in JSON:
     return this.parseAIAnalysis(response.data.generations[0].text);
   }
 
-  processAIResponse(response, resumeText, jobDescription) {
+  processAIResponse(response, resumeText, jobDescription, providerName) {
     try {
-      // Try to extract JSON from response
+      // Extract JSON from response
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         
-        // Apply intelligent scoring logic with resume and JD text
-        const intelligentAnalysis = this.applyIntelligentScoring(parsed, resumeText, jobDescription);
+        // Apply realistic recruiter scoring
+        const realisticAnalysis = this.applyRealisticScoring(parsed, resumeText, jobDescription, providerName);
         
-        return intelligentAnalysis;
+        return realisticAnalysis;
       }
     } catch (error) {
-      console.log('Failed to parse AI response:', error.message);
+      console.log(`Failed to parse ${providerName} response:`, error.message);
     }
     
     return null;
@@ -506,74 +617,84 @@ Respond in JSON:
 
 
 
-  // Apply intelligent scoring with nuanced recruiting logic
-  applyIntelligentScoring(parsed, resumeText, jobDescription) {
+  // Apply realistic recruiter scoring logic
+  applyRealisticScoring(parsed, resumeText, jobDescription, providerName) {
     if (!resumeText || !jobDescription) {
-      console.log('Missing resumeText or jobDescription in applyIntelligentScoring');
+      console.log('Missing resumeText or jobDescription');
       return null;
     }
 
-    // Extract skills from new structure
     const mustHaveMatched = parsed.mustHaveSkills?.matched || [];
     const mustHaveMissing = parsed.mustHaveSkills?.missing || [];
     const preferredMatched = parsed.preferredSkills?.matched || [];
     const preferredMissing = parsed.preferredSkills?.missing || [];
     const relatedSkills = parsed.relatedSkills || [];
-    const softSkillsMatched = parsed.softSkills?.matched || [];
-    const softSkillsMissing = parsed.softSkills?.missing || [];
+    const redFlags = parsed.redFlags || [];
+    const strengths = parsed.strengths || [];
     
-    // Combine all matched skills for display
-    const allSkillsMatch = [...mustHaveMatched, ...preferredMatched, ...relatedSkills, ...softSkillsMatched];
-    const allSkillsGap = [...mustHaveMissing, ...preferredMissing, ...softSkillsMissing];
+    const allSkillsMatch = [...mustHaveMatched, ...preferredMatched, ...relatedSkills];
+    const allSkillsGap = [...mustHaveMissing, ...preferredMissing];
     
-    let finalScore = Math.min(Math.max(parsed.matchScore || 50, 20), 95);
-    let verdict = parsed.verdict || 'Partial fit';
-    
-    // Role-level adjustments
+    let finalScore = Math.min(Math.max(parsed.matchScore || 50, 15), 95);
     const roleLevel = parsed.roleLevel || 'junior';
-    const resumeLower = resumeText.toLowerCase();
-    const jdLower = jobDescription.toLowerCase();
+    const experienceData = parsed.experienceYears || { candidate: 0, required: 0, gap: 0 };
     
-    // Intelligent experience validation based on role level
-    let experienceIssues = [];
-    if (roleLevel === 'senior' && resumeLower.includes('student')) {
-      experienceIssues.push('Student applying for senior role');
-      finalScore = Math.min(finalScore, 25);
-    } else if (roleLevel === 'mid' && !resumeLower.match(/\d+\s*(?:years?|yrs?)/)) {
-      experienceIssues.push('No clear experience for mid-level role');
-      finalScore = Math.min(finalScore, 45);
+    // REALISTIC RECRUITER ADJUSTMENTS
+    
+    // 1. Experience Gap Penalties (Harsh but realistic)
+    if (experienceData.gap > 0) {
+      if (experienceData.gap >= 3) {
+        finalScore = Math.min(finalScore, 35); // Significant experience gap
+      } else if (experienceData.gap >= 1) {
+        finalScore = Math.max(finalScore - (experienceData.gap * 12), 25);
+      }
     }
     
-    // Must-have skills are critical
+    // 2. Critical Skills Missing (Deal breakers)
     if (mustHaveMissing.length > 0) {
-      const penalty = Math.min(mustHaveMissing.length * 15, 40);
-      finalScore = Math.max(finalScore - penalty, 20);
+      const criticalPenalty = mustHaveMissing.length * 18;
+      finalScore = Math.max(finalScore - criticalPenalty, 20);
     }
     
-    // Preferred skills have moderate impact
-    if (preferredMissing.length > 0) {
-      const penalty = Math.min(preferredMissing.length * 8, 25);
-      finalScore = Math.max(finalScore - penalty, 30);
+    // 3. Red Flags (Automatic score caps)
+    redFlags.forEach(flag => {
+      if (flag.includes('student') && roleLevel === 'senior') {
+        finalScore = Math.min(finalScore, 25);
+      } else if (flag.includes('overqualified')) {
+        finalScore = Math.min(finalScore, 60);
+      } else if (flag.includes('no experience')) {
+        finalScore = Math.min(finalScore, 40);
+      }
+    });
+    
+    // 4. Project Complexity Bonus
+    if (parsed.projectComplexity === 'advanced') {
+      finalScore = Math.min(finalScore + 8, 95);
+    } else if (parsed.projectComplexity === 'intermediate') {
+      finalScore = Math.min(finalScore + 4, 90);
     }
     
-    // Related skills provide partial credit
+    // 5. Related Skills Partial Credit
     if (relatedSkills.length > 0) {
-      finalScore = Math.min(finalScore + (relatedSkills.length * 5), 95);
+      finalScore = Math.min(finalScore + (relatedSkills.length * 3), 90);
     }
     
-    // Normalize verdict based on final score
+    // 6. Realistic Verdict Assignment
+    let verdict = 'Poor fit';
     if (finalScore >= 85) {
       verdict = 'Strong fit';
     } else if (finalScore >= 70) {
       verdict = 'Good fit';
     } else if (finalScore >= 50) {
       verdict = 'Partial fit';
-    } else {
+    } else if (finalScore >= 30) {
       verdict = 'Poor fit';
+    } else {
+      verdict = 'Not suitable';
     }
     
-    // Generate intelligent breakdown
-    const breakdown = this.generateNuancedBreakdown({
+    // Generate recruiter-style breakdown
+    const breakdown = this.generateRecruiterBreakdown({
       finalScore,
       roleLevel,
       mustHaveMatched,
@@ -581,120 +702,160 @@ Respond in JSON:
       preferredMatched,
       preferredMissing,
       relatedSkills,
-      projectDepth: parsed.projectDepth,
-      experienceIssues,
-      summary: parsed.summary
+      experienceData,
+      redFlags,
+      strengths,
+      projectComplexity: parsed.projectComplexity,
+      recruiterNotes: parsed.recruiterNotes
     });
     
     return {
-      matchScore: finalScore,
+      matchScore: Math.round(finalScore),
       skillsMatch: allSkillsMatch,
       skillsGap: allSkillsGap,
-      experienceGap: parsed.experienceGap || 'Experience assessment completed',
-      educationGap: 'Education requirements assessed',
-      seniorityMismatch: `Role level: ${roleLevel}`,
-      recommendations: parsed.recommendations || this.generateSmartRecommendations(finalScore, mustHaveMissing, preferredMissing),
-      summary: parsed.summary || breakdown.summary,
+      experienceGap: `${experienceData.gap} years gap (${experienceData.candidate}/${experienceData.required} required)`,
+      educationGap: 'Assessed by AI',
+      seniorityMismatch: `${roleLevel} level role`,
+      recommendations: parsed.recommendations || this.generateRealisticRecommendations(finalScore, mustHaveMissing, experienceData, redFlags),
+      summary: parsed.recruiterNotes || breakdown.summary,
       verdict,
       roleLevel,
       mustHaveSkills: { matched: mustHaveMatched, missing: mustHaveMissing },
       preferredSkills: { matched: preferredMatched, missing: preferredMissing },
       relatedSkills,
-      projectDepth: parsed.projectDepth,
+      experienceData,
+      redFlags,
+      projectComplexity: parsed.projectComplexity,
       breakdown,
       strengths: allSkillsMatch.slice(0, 6),
-      improvements: allSkillsGap.slice(0, 6)
+      improvements: allSkillsGap.slice(0, 6),
+      aiProvider: providerName
     };
   }
 
-  generateNuancedBreakdown({finalScore, roleLevel, mustHaveMatched, mustHaveMissing, preferredMatched, preferredMissing, relatedSkills, projectDepth, experienceIssues, summary}) {
+  generateRecruiterBreakdown({finalScore, roleLevel, mustHaveMatched, mustHaveMissing, preferredMatched, preferredMissing, relatedSkills, experienceData, redFlags, strengths, projectComplexity, recruiterNotes}) {
     const breakdown = {
-      eligibilityScore: Math.max(finalScore - 10, 30),
+      eligibilityScore: Math.max(finalScore - 5, 20),
       skillScore: 0,
+      experienceScore: 0,
       overallScore: finalScore,
       primaryStrengths: [],
       primaryConcerns: [],
+      hiringRecommendation: '',
       summary: ''
     };
     
-    // Calculate nuanced skill score
-    const totalCriticalSkills = mustHaveMatched.length + mustHaveMissing.length;
-    const criticalSkillScore = totalCriticalSkills > 0 ? 
-      Math.round((mustHaveMatched.length / totalCriticalSkills) * 100) : 70;
+    // Calculate realistic skill score
+    const totalCritical = mustHaveMatched.length + mustHaveMissing.length;
+    const criticalScore = totalCritical > 0 ? Math.round((mustHaveMatched.length / totalCritical) * 100) : 60;
     
-    const totalPreferredSkills = preferredMatched.length + preferredMissing.length;
-    const preferredSkillScore = totalPreferredSkills > 0 ? 
-      Math.round((preferredMatched.length / totalPreferredSkills) * 100) : 50;
+    const totalPreferred = preferredMatched.length + preferredMissing.length;
+    const preferredScore = totalPreferred > 0 ? Math.round((preferredMatched.length / totalPreferred) * 100) : 40;
     
-    breakdown.skillScore = Math.round((criticalSkillScore * 0.7) + (preferredSkillScore * 0.3));
+    breakdown.skillScore = Math.round((criticalScore * 0.8) + (preferredScore * 0.2));
     
-    // Identify strengths
-    if (mustHaveMatched.length > 0) {
-      breakdown.primaryStrengths.push(`Strong in core skills: ${mustHaveMatched.slice(0, 3).join(', ')}`);
+    // Calculate experience score
+    if (experienceData.gap <= 0) {
+      breakdown.experienceScore = 90;
+    } else if (experienceData.gap === 1) {
+      breakdown.experienceScore = 70;
+    } else if (experienceData.gap === 2) {
+      breakdown.experienceScore = 50;
+    } else {
+      breakdown.experienceScore = 25;
+    }
+    
+    // Identify key strengths
+    if (mustHaveMatched.length >= 3) {
+      breakdown.primaryStrengths.push(`Solid technical foundation: ${mustHaveMatched.slice(0, 3).join(', ')}`);
     }
     if (relatedSkills.length > 0) {
-      breakdown.primaryStrengths.push(`Transferable skills: ${relatedSkills.slice(0, 2).join(', ')}`);
+      breakdown.primaryStrengths.push(`Transferable experience: ${relatedSkills.slice(0, 2).join(', ')}`);
     }
-    if (projectDepth && projectDepth.includes('sophisticated')) {
-      breakdown.primaryStrengths.push('Demonstrates technical depth in projects');
+    if (projectComplexity === 'advanced') {
+      breakdown.primaryStrengths.push('Demonstrates advanced project experience');
+    }
+    if (strengths.length > 0) {
+      breakdown.primaryStrengths.push(strengths[0]);
     }
     
-    // Identify concerns
+    // Identify major concerns
     if (mustHaveMissing.length > 0) {
-      breakdown.primaryConcerns.push(`Missing critical skills: ${mustHaveMissing.slice(0, 2).join(', ')}`);
+      breakdown.primaryConcerns.push(`Missing critical requirements: ${mustHaveMissing.slice(0, 2).join(', ')}`);
     }
-    if (experienceIssues.length > 0) {
-      breakdown.primaryConcerns.push(experienceIssues[0]);
+    if (experienceData.gap > 2) {
+      breakdown.primaryConcerns.push(`Significant experience gap: ${experienceData.gap} years short`);
     }
-    if (preferredMissing.length > 2) {
-      breakdown.primaryConcerns.push('Limited coverage of preferred skills');
+    if (redFlags.length > 0) {
+      breakdown.primaryConcerns.push(redFlags[0]);
     }
     
-    // Generate intelligent summary
-    breakdown.summary = summary || this.generateRecruitingSummary(finalScore, roleLevel, breakdown.primaryStrengths, breakdown.primaryConcerns);
+    // Generate hiring recommendation
+    if (finalScore >= 80) {
+      breakdown.hiringRecommendation = '✅ RECOMMEND - Strong candidate, proceed to interview';
+    } else if (finalScore >= 65) {
+      breakdown.hiringRecommendation = '🟡 CONSIDER - Good potential, address gaps in interview';
+    } else if (finalScore >= 45) {
+      breakdown.hiringRecommendation = '🟠 MAYBE - Significant gaps, consider for junior role';
+    } else {
+      breakdown.hiringRecommendation = '❌ REJECT - Poor fit, major skill/experience gaps';
+    }
+    
+    breakdown.summary = recruiterNotes || this.generateHiringManagerSummary(finalScore, roleLevel, breakdown.primaryStrengths, breakdown.primaryConcerns);
     
     return breakdown;
   }
   
-  generateRecruitingSummary(score, roleLevel, strengths, concerns) {
+  generateHiringManagerSummary(score, roleLevel, strengths, concerns) {
     if (score >= 85) {
-      return `✅ Strong ${roleLevel}-level candidate. ${strengths.length > 0 ? strengths[0] : 'Well-qualified'}. Recommend interview.`;
+      return `STRONG CANDIDATE: Excellent ${roleLevel}-level fit. ${strengths.length > 0 ? strengths[0] : 'Meets all key requirements'}. High confidence hire - schedule interview immediately.`;
     } else if (score >= 70) {
-      return `🟡 Good ${roleLevel}-level fit. ${concerns.length > 0 ? concerns[0] + ' but addressable.' : 'Minor gaps addressable.'}`;
+      return `GOOD CANDIDATE: Solid ${roleLevel}-level potential. ${strengths.length > 0 ? strengths[0] : 'Strong foundation'}. ${concerns.length > 0 ? concerns[0] + ' - addressable through training.' : 'Minor gaps manageable.'}`;
     } else if (score >= 50) {
-      return `🟠 Partial fit for ${roleLevel} role. ${concerns.length > 0 ? concerns[0] : 'Significant ramp-up needed'}.`;
+      return `MARGINAL FIT: Limited match for ${roleLevel} role. ${concerns.length > 0 ? concerns[0] : 'Multiple skill gaps'}. Consider for junior position or extensive onboarding.`;
+    } else if (score >= 30) {
+      return `POOR FIT: Significant gaps for ${roleLevel} position. ${concerns.length > 0 ? concerns[0] : 'Major skill deficiencies'}. Not recommended unless desperate.`;
     } else {
-      return `🔴 Poor fit for ${roleLevel} position. ${concerns.length > 0 ? concerns[0] : 'Major skill gaps'}. Not recommended.`;
+      return `NOT SUITABLE: Fundamental mismatch for ${roleLevel} role. ${concerns.length > 0 ? concerns[0] : 'Critical requirements missing'}. Do not proceed.`;
     }
   }
 
-  generateSmartRecommendations(finalScore, mustHaveMissing, preferredMissing) {
+  generateRealisticRecommendations(finalScore, mustHaveMissing, experienceData, redFlags) {
     const recommendations = [];
     
-    if (finalScore >= 85) {
-      recommendations.push('✅ Strong candidate - apply with confidence');
-      recommendations.push('💬 Prepare to discuss your matching experience in detail');
-      if (preferredMissing.length > 0) {
-        recommendations.push(`📚 Optional: Learn ${preferredMissing[0]} to stand out further`);
-      }
-    } else if (finalScore >= 70) {
-      recommendations.push('🟡 Good fit - apply and address gaps in cover letter');
+    if (finalScore >= 80) {
+      recommendations.push('🎯 STRONG MATCH - Apply immediately with confidence');
+      recommendations.push('📝 Highlight your matching skills prominently in application');
+      recommendations.push('💼 Prepare specific examples of relevant project experience');
       if (mustHaveMissing.length > 0) {
-        recommendations.push(`🎯 Priority: Gain experience with ${mustHaveMissing[0]}`);
+        recommendations.push(`📚 Bonus: Quick refresh on ${mustHaveMissing[0]} before interview`);
       }
-      recommendations.push('💬 Emphasize your learning ability and related experience');
-    } else if (finalScore >= 50) {
-      recommendations.push('🟠 Partial fit - consider applying if you can address key gaps');
+    } else if (finalScore >= 65) {
+      recommendations.push('✅ GOOD FIT - Apply and address gaps proactively');
+      recommendations.push('📄 Write compelling cover letter explaining your potential');
       if (mustHaveMissing.length > 0) {
-        recommendations.push(`⚡ Critical: Learn ${mustHaveMissing.slice(0, 2).join(' and ')} first`);
+        recommendations.push(`🎯 PRIORITY: Start learning ${mustHaveMissing[0]} immediately`);
       }
-      recommendations.push('📈 Look for similar roles with lower requirements');
+      recommendations.push('🗣️ Emphasize your adaptability and quick learning ability');
+    } else if (finalScore >= 45) {
+      recommendations.push('⚠️ RISKY APPLICATION - Major gaps need addressing');
+      if (experienceData.gap > 1) {
+        recommendations.push(`⏰ Gain ${experienceData.gap} more years experience first`);
+      }
+      if (mustHaveMissing.length > 0) {
+        recommendations.push(`🚨 CRITICAL: Master ${mustHaveMissing.slice(0, 2).join(' and ')} before applying`);
+      }
+      recommendations.push('📊 Look for junior/mid-level roles instead');
     } else {
-      recommendations.push('🔴 Poor fit - focus on building core skills first');
-      if (mustHaveMissing.length > 0) {
-        recommendations.push(`🎯 Build foundation: ${mustHaveMissing.slice(0, 2).join(', ')}`);
+      recommendations.push('❌ NOT READY - Significant skill building required');
+      if (redFlags.length > 0) {
+        recommendations.push(`🚩 Address: ${redFlags[0]}`);
       }
-      recommendations.push('📚 Consider junior roles to gain experience');
+      if (mustHaveMissing.length > 0) {
+        recommendations.push(`📚 Build foundation: ${mustHaveMissing.slice(0, 3).join(', ')}`);
+      }
+      recommendations.push('🎯 Target entry-level positions to gain experience');
+      recommendations.push('💡 Consider bootcamps or certifications in missing areas');
     }
     
     return recommendations;
