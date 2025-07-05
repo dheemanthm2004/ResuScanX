@@ -1,5 +1,4 @@
 const axios = require('axios');
-const natural = require('natural');
 const atsService = require('./atsService');
 
 class AIService {
@@ -182,79 +181,7 @@ Be brutally honest like a real hiring manager. Reference specific resume content
     };
   }
 
-  async tryDetailedOpenRouter(prompt) {
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        model: 'meta-llama/llama-3.2-3b-instruct:free',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 1500,
-        temperature: 0.7
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.OPEN_ROUTER_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 20000
-      }
-    );
-    return response.data.choices[0].message.content;
-  }
 
-  async tryDetailedMistral(prompt) {
-    const response = await axios.post(
-      'https://api.mistral.ai/v1/chat/completions',
-      {
-        model: 'mistral-tiny',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 1200,
-        temperature: 0.6
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 20000
-      }
-    );
-    return response.data.choices[0].message.content;
-  }
-
-  async tryDetailedCohere(prompt) {
-    const response = await axios.post(
-      'https://api.cohere.ai/v1/generate',
-      {
-        model: 'command-light',
-        prompt: prompt,
-        max_tokens: 1000,
-        temperature: 0.6
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.COHERE_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 20000
-      }
-    );
-    return response.data.generations[0].text;
-  }
-
-  async tryDetailedGemini(prompt) {
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        contents: [{ parts: [{ text: prompt }] }]
-      },
-      {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 20000
-      }
-    );
-    return response.data.candidates[0].content.parts[0].text;
-  }
 
 
 
@@ -536,65 +463,7 @@ Respond ONLY in valid JSON:
     return response.data.choices[0].message.content;
   }
 
-  async tryOpenRouterAnalysis(prompt, resumeText, jobDescription) {
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        model: 'meta-llama/llama-3.2-3b-instruct:free',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 800
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.OPEN_ROUTER_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 15000
-      }
-    );
-    
-    return this.parseAIAnalysis(response.data.choices[0].message.content);
-  }
 
-  async tryMistralAnalysis(prompt, resumeText, jobDescription) {
-    const response = await axios.post(
-      'https://api.mistral.ai/v1/chat/completions',
-      {
-        model: 'mistral-tiny',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 600
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 15000
-      }
-    );
-    
-    return this.parseAIAnalysis(response.data.choices[0].message.content);
-  }
-
-  async tryCohereAnalysis(prompt) {
-    const response = await axios.post(
-      'https://api.cohere.ai/v1/generate',
-      {
-        model: 'command-light',
-        prompt: prompt,
-        max_tokens: 500
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.COHERE_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 15000
-      }
-    );
-    
-    return this.parseAIAnalysis(response.data.generations[0].text);
-  }
 
   processAIResponse(response, resumeText, jobDescription, providerName) {
     try {
@@ -907,79 +776,7 @@ Respond ONLY in valid JSON:
     };
   }
 
-  generateComprehensiveRecommendations({skillsGap, experienceAnalysis, educationAnalysis, seniorityAnalysis, matchScore}) {
-    const recommendations = [];
-    
-    // Experience recommendations
-    if (experienceAnalysis.gap > 0) {
-      if (experienceAnalysis.gap >= 3) {
-        recommendations.push(`⚠️ This role requires ${experienceAnalysis.required}+ years experience. You may be underqualified.`);
-        recommendations.push('Consider applying to more junior positions to build experience first.');
-      } else {
-        recommendations.push(`You need ${experienceAnalysis.gap} more years of experience. Highlight relevant projects and internships.`);
-      }
-    }
-    
-    // Education recommendations
-    if (educationAnalysis.gap > 0) {
-      recommendations.push('Consider pursuing additional education or certifications to meet the requirements.');
-    }
-    
-    // Seniority recommendations
-    if (seniorityAnalysis.mismatch > 1) {
-      if (seniorityAnalysis.candidate < seniorityAnalysis.required) {
-        recommendations.push('This appears to be a senior-level role. Consider gaining more leadership experience.');
-      } else {
-        recommendations.push('You may be overqualified for this position. Consider more senior roles.');
-      }
-    }
-    
-    // Skill recommendations
-    if (skillsGap.length > 0) {
-      skillsGap.slice(0, 3).forEach(skill => {
-        recommendations.push(`Learn ${skill} through courses or practical projects`);
-      });
-    }
-    
-    // Overall recommendations
-    if (matchScore < 60) {
-      recommendations.push('Consider looking for roles that better match your current experience level.');
-    }
-    
-    return recommendations;
-  }
 
-  generateRealisticSummary({matchScore, skillsMatch, skillsGap, experienceAnalysis, educationAnalysis, seniorityAnalysis}) {
-    let summary = '';
-    
-    if (matchScore >= 80) {
-      summary = `🎯 Strong match! You meet most requirements for this role.`;
-    } else if (matchScore >= 60) {
-      summary = `✅ Good potential match with some gaps to address.`;
-    } else if (matchScore >= 40) {
-      summary = `⚠️ Partial match. Significant gaps in requirements.`;
-    } else {
-      summary = `❌ Poor match. This role may not be suitable for your current profile.`;
-    }
-    
-    // Add specific concerns
-    const concerns = [];
-    if (experienceAnalysis.gap > 2) {
-      concerns.push(`${experienceAnalysis.gap} years experience gap`);
-    }
-    if (!educationAnalysis.sufficient) {
-      concerns.push('education requirements not met');
-    }
-    if (seniorityAnalysis.mismatch > 1) {
-      concerns.push('seniority level mismatch');
-    }
-    
-    if (concerns.length > 0) {
-      summary += ` Key concerns: ${concerns.join(', ')}.`;
-    }
-    
-    return summary;
-  }
 }
 
 module.exports = new AIService();
