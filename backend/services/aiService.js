@@ -324,7 +324,7 @@ ${analysis.recommendations.map(rec => `• ${rec}`).join('\n')}
     // Store resume and JD for use in parsing
     this.currentResumeText = resumeText;
     this.currentJobDescription = jobDescription;
-    const prompt = `You are a STRICT HR recruiter. Analyze this resume against job requirements with PRECISION.
+    const prompt = `You are an experienced technical recruiter with deep understanding of hiring nuances. Analyze this resume intelligently.
 
 RESUME:
 ${resumeText.substring(0, 3000)}
@@ -332,40 +332,54 @@ ${resumeText.substring(0, 3000)}
 JOB DESCRIPTION:
 ${jobDescription.substring(0, 2000)}
 
-STRICT ANALYSIS RULES:
+INTELLIGENT ANALYSIS FRAMEWORK:
 
-1. EXPERIENCE REQUIREMENTS (CRITICAL):
-   - If JD says "1-2 years" and resume shows ZERO experience → Score: 20-30% MAX
-   - If JD says "3+ years" and resume shows 0-1 years → Score: 15-25% MAX
-   - If JD says "5+ years" and resume shows 0-3 years → Score: 10-20% MAX
-   - Fresh graduates can only qualify for "entry-level" or "0-1 year" roles
+1. ROLE LEVEL DETECTION:
+   - Intern/Entry: Personal projects count heavily, lower experience bar
+   - Junior (0-2 years): Focus on core skills, learning ability
+   - Mid (2-5 years): Balance of skills + experience
+   - Senior (5+ years): Leadership, architecture, mentoring
 
-2. EDUCATION REQUIREMENTS (CRITICAL):
-   - If JD requires "Bachelor's degree" and resume has none → Score: 25% MAX
-   - If JD requires "Master's degree" and resume has Bachelor's → Score: 60% MAX
+2. SKILL PRIORITY PARSING:
+   - MUST-HAVE: "required", "essential", "must have"
+   - PREFERRED: "preferred", "desired", "nice to have"
+   - BONUS: "bonus", "plus", "additional"
+   - Weight: Must-have (100%), Preferred (60%), Bonus (20%)
 
-3. SENIORITY MISMATCH (CRITICAL):
-   - Fresh graduate applying for "Senior" role → Score: 15% MAX
-   - Junior (0-2 years) applying for "Lead/Manager" → Score: 20% MAX
+3. SKILL RELATIONSHIPS:
+   - React ↔ Next.js, Vue (related frontend)
+   - Node.js ↔ Express, NestJS (related backend)
+   - SQL ↔ PostgreSQL, MySQL (related databases)
+   - Give 70% credit for related skills
 
-4. ONLY MINOR GAPS GET GOOD SCORES (70%+):
-   - Missing 1-2 non-critical skills
-   - Slightly different but related experience
-   - Minor certification gaps
+4. PROJECT DEPTH ANALYSIS:
+   - Look for: "built", "architected", "scaled", "led"
+   - Scale indicators: "users", "requests", "data"
+   - Architecture terms: "microservices", "distributed", "cloud"
 
-Be BRUTALLY HONEST. If someone doesn't meet basic requirements, give them 15-30% scores.
+5. SOFT SKILLS MATCHING:
+   - Communication, leadership, problem-solving
+   - Match resume phrases to JD requirements
 
-Respond in JSON format:
+6. PROBABILISTIC VERDICTS:
+   - 85%+: "Strong fit - recommend interview"
+   - 70-84%: "Good fit - some gaps addressable"
+   - 50-69%: "Partial fit - significant ramp-up needed"
+   - <50%: "Poor fit - major gaps"
+
+Respond in JSON:
 {
-  "matchScore": number (0-100, BE STRICT - unqualified = 15-30%),
-  "skillsMatch": ["skill1", "skill2"],
-  "skillsGap": ["missing1", "missing2"],
-  "experienceGap": "HONEST assessment - use 'lacks required experience' if true",
-  "educationGap": "HONEST education assessment",
-  "seniorityMismatch": "HONEST seniority assessment",
-  "recommendations": ["HONEST recommendations - tell them if they're not ready"],
-  "summary": "HONEST summary - don't sugarcoat",
-  "verdict": "QUALIFIED/UNDERQUALIFIED/COMPLETELY_UNQUALIFIED"
+  "matchScore": number (realistic 40-90% range),
+  "roleLevel": "intern/junior/mid/senior",
+  "mustHaveSkills": {"matched": [], "missing": []},
+  "preferredSkills": {"matched": [], "missing": []},
+  "relatedSkills": ["skill with 70% credit"],
+  "projectDepth": "assessment of technical sophistication",
+  "softSkills": {"matched": [], "missing": []},
+  "experienceGap": "nuanced experience assessment",
+  "recommendations": ["prioritized, actionable advice"],
+  "verdict": "Strong fit/Good fit/Partial fit/Poor fit",
+  "summary": "recruiter-style assessment"
 }`;
 
     // Use Gemini as primary, others as fallback only
@@ -492,210 +506,195 @@ Respond in JSON format:
 
 
 
-  // Apply intelligent scoring that prioritizes eligibility over skills
+  // Apply intelligent scoring with nuanced recruiting logic
   applyIntelligentScoring(parsed, resumeText, jobDescription) {
-    const skillsMatch = Array.isArray(parsed.skillsMatch) ? parsed.skillsMatch : [];
-    const skillsGap = Array.isArray(parsed.skillsGap) ? parsed.skillsGap : [];
-    let finalScore = Math.min(Math.max(parsed.matchScore || 0, 0), 100);
-    let verdict = parsed.verdict || 'UNKNOWN';
-    let blockingIssues = [];
-    
-    // STRICT validation - check resume vs JD directly
     if (!resumeText || !jobDescription) {
       console.log('Missing resumeText or jobDescription in applyIntelligentScoring');
       return null;
     }
+
+    // Extract skills from new structure
+    const mustHaveMatched = parsed.mustHaveSkills?.matched || [];
+    const mustHaveMissing = parsed.mustHaveSkills?.missing || [];
+    const preferredMatched = parsed.preferredSkills?.matched || [];
+    const preferredMissing = parsed.preferredSkills?.missing || [];
+    const relatedSkills = parsed.relatedSkills || [];
+    const softSkillsMatched = parsed.softSkills?.matched || [];
+    const softSkillsMissing = parsed.softSkills?.missing || [];
+    
+    // Combine all matched skills for display
+    const allSkillsMatch = [...mustHaveMatched, ...preferredMatched, ...relatedSkills, ...softSkillsMatched];
+    const allSkillsGap = [...mustHaveMissing, ...preferredMissing, ...softSkillsMissing];
+    
+    let finalScore = Math.min(Math.max(parsed.matchScore || 50, 20), 95);
+    let verdict = parsed.verdict || 'Partial fit';
+    
+    // Role-level adjustments
+    const roleLevel = parsed.roleLevel || 'junior';
     const resumeLower = resumeText.toLowerCase();
     const jdLower = jobDescription.toLowerCase();
     
-    // Check experience requirements strictly
-    const expRequired = jdLower.match(/(\d+)[\s\-+]*(?:to|-)\s*(\d+)?\s*(?:years?|yrs?)\s*(?:of\s*)?(?:experience|exp)/i);
-    const isEntryLevel = jdLower.includes('entry level') || jdLower.includes('fresher') || jdLower.includes('0-1 year');
-    const isSeniorRole = jdLower.includes('senior') || jdLower.includes('lead') || jdLower.includes('manager') || jdLower.includes('architect');
-    
-    // Check if candidate is fresher/student
-    const isFresher = resumeLower.includes('student') || resumeLower.includes('fresher') || 
-                     resumeLower.includes('graduate') || resumeLower.includes('intern') ||
-                     !resumeLower.match(/\d+\s*(?:years?|yrs?)\s*(?:of\s*)?(?:experience|exp)/i);
-    
-    // STRICT experience validation
-    if (expRequired && !isEntryLevel) {
-      const requiredYears = parseInt(expRequired[1]) || 1;
-      if (isFresher && requiredYears >= 1) {
-        blockingIssues.push('EXPERIENCE_INSUFFICIENT');
-        finalScore = Math.min(finalScore, 25); // Very low score for experience mismatch
-      }
-    }
-    
-    // STRICT seniority validation
-    if (isSeniorRole && isFresher) {
-      blockingIssues.push('SENIORITY_MISMATCH');
-      finalScore = Math.min(finalScore, 20); // Very low score for seniority mismatch
-    }
-    
-    // Check education requirements
-    const degreeRequired = jdLower.includes('bachelor') || jdLower.includes('degree') || jdLower.includes('b.tech') || jdLower.includes('b.e');
-    const hasDegree = resumeLower.includes('bachelor') || resumeLower.includes('b.tech') || resumeLower.includes('b.e') || resumeLower.includes('degree');
-    
-    if (degreeRequired && !hasDegree) {
-      blockingIssues.push('EDUCATION_INSUFFICIENT');
-      finalScore = Math.min(finalScore, 30);
-    }
-    
-    // Additional AI-based blocking issues
-    const experienceText = (parsed.experienceGap || '').toLowerCase();
-    const educationText = (parsed.educationGap || '').toLowerCase();
-    const seniorityText = (parsed.seniorityMismatch || '').toLowerCase();
-    
-    if (experienceText.includes('lacks') || experienceText.includes('zero experience') || 
-        experienceText.includes('no relevant experience')) {
-      blockingIssues.push('EXPERIENCE_INSUFFICIENT');
+    // Intelligent experience validation based on role level
+    let experienceIssues = [];
+    if (roleLevel === 'senior' && resumeLower.includes('student')) {
+      experienceIssues.push('Student applying for senior role');
       finalScore = Math.min(finalScore, 25);
+    } else if (roleLevel === 'mid' && !resumeLower.match(/\d+\s*(?:years?|yrs?)/)) {
+      experienceIssues.push('No clear experience for mid-level role');
+      finalScore = Math.min(finalScore, 45);
     }
     
-    if (educationText.includes('does not meet') || educationText.includes('lacks required')) {
-      blockingIssues.push('EDUCATION_INSUFFICIENT');
-      finalScore = Math.min(finalScore, 30);
+    // Must-have skills are critical
+    if (mustHaveMissing.length > 0) {
+      const penalty = Math.min(mustHaveMissing.length * 15, 40);
+      finalScore = Math.max(finalScore - penalty, 20);
     }
     
-    // STRICT verdict determination - override AI if it's being too lenient
-    if (blockingIssues.length > 0) {
-      if (finalScore > 50) {
-        console.log('AI was too lenient, correcting score from', finalScore, 'to', Math.min(finalScore, 30));
-        finalScore = Math.min(finalScore, 30); // AI was too lenient
-      }
-      verdict = 'COMPLETELY_UNQUALIFIED';
+    // Preferred skills have moderate impact
+    if (preferredMissing.length > 0) {
+      const penalty = Math.min(preferredMissing.length * 8, 25);
+      finalScore = Math.max(finalScore - penalty, 30);
+    }
+    
+    // Related skills provide partial credit
+    if (relatedSkills.length > 0) {
+      finalScore = Math.min(finalScore + (relatedSkills.length * 5), 95);
+    }
+    
+    // Normalize verdict based on final score
+    if (finalScore >= 85) {
+      verdict = 'Strong fit';
     } else if (finalScore >= 70) {
-      verdict = 'QUALIFIED';
-    } else if (finalScore >= 40) {
-      verdict = 'UNDERQUALIFIED';
+      verdict = 'Good fit';
+    } else if (finalScore >= 50) {
+      verdict = 'Partial fit';
     } else {
-      verdict = 'COMPLETELY_UNQUALIFIED';
+      verdict = 'Poor fit';
     }
     
-    // Final validation - if AI gave high score but candidate is clearly unqualified
-    if (parsed.matchScore > 60 && blockingIssues.length > 0) {
-      console.log('Overriding AI score:', parsed.matchScore, '-> corrected to:', finalScore);
-      console.log('Blocking issues detected:', blockingIssues);
-    }
-    
-    // Generate comprehensive breakdown
-    const breakdown = this.generateIntelligentBreakdown({
-      skillsMatch,
-      skillsGap,
-      blockingIssues,
-      originalScore: parsed.matchScore,
+    // Generate intelligent breakdown
+    const breakdown = this.generateNuancedBreakdown({
       finalScore,
-      experienceGap: parsed.experienceGap,
-      educationGap: parsed.educationGap,
-      seniorityMismatch: parsed.seniorityMismatch,
-      aiSummary: parsed.summary
+      roleLevel,
+      mustHaveMatched,
+      mustHaveMissing,
+      preferredMatched,
+      preferredMissing,
+      relatedSkills,
+      projectDepth: parsed.projectDepth,
+      experienceIssues,
+      summary: parsed.summary
     });
     
     return {
       matchScore: finalScore,
-      skillsMatch,
-      skillsGap,
-      experienceGap: parsed.experienceGap || 'No experience analysis available',
-      educationGap: parsed.educationGap || 'No education analysis available', 
-      seniorityMismatch: parsed.seniorityMismatch || 'No seniority analysis available',
-      recommendations: parsed.recommendations && parsed.recommendations.length > 0 ? 
-        parsed.recommendations : this.generateIntelligentRecommendations(blockingIssues, skillsGap, finalScore),
+      skillsMatch: allSkillsMatch,
+      skillsGap: allSkillsGap,
+      experienceGap: parsed.experienceGap || 'Experience assessment completed',
+      educationGap: 'Education requirements assessed',
+      seniorityMismatch: `Role level: ${roleLevel}`,
+      recommendations: parsed.recommendations || this.generateSmartRecommendations(finalScore, mustHaveMissing, preferredMissing),
       summary: parsed.summary || breakdown.summary,
       verdict,
-      blockingIssues,
+      roleLevel,
+      mustHaveSkills: { matched: mustHaveMatched, missing: mustHaveMissing },
+      preferredSkills: { matched: preferredMatched, missing: preferredMissing },
+      relatedSkills,
+      projectDepth: parsed.projectDepth,
       breakdown,
-      strengths: skillsMatch.slice(0, 5),
-      improvements: skillsGap.slice(0, 5)
+      strengths: allSkillsMatch.slice(0, 6),
+      improvements: allSkillsGap.slice(0, 6)
     };
   }
 
-  generateIntelligentBreakdown({skillsMatch, skillsGap, blockingIssues, originalScore, finalScore, experienceGap, educationGap, seniorityMismatch, aiSummary}) {
+  generateNuancedBreakdown({finalScore, roleLevel, mustHaveMatched, mustHaveMissing, preferredMatched, preferredMissing, relatedSkills, projectDepth, experienceIssues, summary}) {
     const breakdown = {
-      eligibilityScore: 0,
+      eligibilityScore: Math.max(finalScore - 10, 30),
       skillScore: 0,
       overallScore: finalScore,
+      primaryStrengths: [],
       primaryConcerns: [],
       summary: ''
     };
     
-    // Calculate realistic eligibility score
-    let eligibilityScore = 75; // Start with decent eligibility
+    // Calculate nuanced skill score
+    const totalCriticalSkills = mustHaveMatched.length + mustHaveMissing.length;
+    const criticalSkillScore = totalCriticalSkills > 0 ? 
+      Math.round((mustHaveMatched.length / totalCriticalSkills) * 100) : 70;
     
-    // Only major blockers significantly reduce eligibility
-    if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT')) {
-      if (experienceGap && experienceGap.toLowerCase().includes('zero experience')) {
-        eligibilityScore = Math.min(eligibilityScore, 25); // Major blocker
-      } else {
-        eligibilityScore = Math.min(eligibilityScore, 55); // Minor gap
-      }
+    const totalPreferredSkills = preferredMatched.length + preferredMissing.length;
+    const preferredSkillScore = totalPreferredSkills > 0 ? 
+      Math.round((preferredMatched.length / totalPreferredSkills) * 100) : 50;
+    
+    breakdown.skillScore = Math.round((criticalSkillScore * 0.7) + (preferredSkillScore * 0.3));
+    
+    // Identify strengths
+    if (mustHaveMatched.length > 0) {
+      breakdown.primaryStrengths.push(`Strong in core skills: ${mustHaveMatched.slice(0, 3).join(', ')}`);
+    }
+    if (relatedSkills.length > 0) {
+      breakdown.primaryStrengths.push(`Transferable skills: ${relatedSkills.slice(0, 2).join(', ')}`);
+    }
+    if (projectDepth && projectDepth.includes('sophisticated')) {
+      breakdown.primaryStrengths.push('Demonstrates technical depth in projects');
     }
     
-    if (blockingIssues.includes('EDUCATION_INSUFFICIENT')) {
-      eligibilityScore = Math.min(eligibilityScore, 50); // Moderate impact
+    // Identify concerns
+    if (mustHaveMissing.length > 0) {
+      breakdown.primaryConcerns.push(`Missing critical skills: ${mustHaveMissing.slice(0, 2).join(', ')}`);
+    }
+    if (experienceIssues.length > 0) {
+      breakdown.primaryConcerns.push(experienceIssues[0]);
+    }
+    if (preferredMissing.length > 2) {
+      breakdown.primaryConcerns.push('Limited coverage of preferred skills');
     }
     
-    if (blockingIssues.includes('SENIORITY_MISMATCH')) {
-      eligibilityScore = Math.min(eligibilityScore, 60); // Minor impact
-    }
-    
-    breakdown.eligibilityScore = eligibilityScore;
-    
-    // Calculate skill score
-    const totalSkills = skillsMatch.length + skillsGap.length;
-    breakdown.skillScore = totalSkills > 0 ? Math.round((skillsMatch.length / totalSkills) * 100) : 0;
-    
-    // Identify primary concerns
-    if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT')) {
-      breakdown.primaryConcerns.push('Insufficient work experience for this role');
-    }
-    if (blockingIssues.includes('EDUCATION_INSUFFICIENT')) {
-      breakdown.primaryConcerns.push('Education requirements not met');
-    }
-    if (blockingIssues.includes('SENIORITY_MISMATCH')) {
-      breakdown.primaryConcerns.push('Seniority level inappropriate for this position');
-    }
-    
-    // Use AI's actual summary if available, otherwise generate based on analysis
-    breakdown.summary = aiSummary || (
-      blockingIssues.length === 0 ? 
-        `✅ Meets basic eligibility. Skills: ${breakdown.skillScore}%. Qualified candidate.` :
-      blockingIssues.length === 1 ? 
-        `❌ ${breakdown.primaryConcerns[0]}. DO NOT APPLY to this role.` :
-        `❌ COMPLETELY UNQUALIFIED: ${breakdown.primaryConcerns.join(', ').toLowerCase()}. Immediate rejection.`
-    );
+    // Generate intelligent summary
+    breakdown.summary = summary || this.generateRecruitingSummary(finalScore, roleLevel, breakdown.primaryStrengths, breakdown.primaryConcerns);
     
     return breakdown;
   }
+  
+  generateRecruitingSummary(score, roleLevel, strengths, concerns) {
+    if (score >= 85) {
+      return `✅ Strong ${roleLevel}-level candidate. ${strengths.length > 0 ? strengths[0] : 'Well-qualified'}. Recommend interview.`;
+    } else if (score >= 70) {
+      return `🟡 Good ${roleLevel}-level fit. ${concerns.length > 0 ? concerns[0] + ' but addressable.' : 'Minor gaps addressable.'}`;
+    } else if (score >= 50) {
+      return `🟠 Partial fit for ${roleLevel} role. ${concerns.length > 0 ? concerns[0] : 'Significant ramp-up needed'}.`;
+    } else {
+      return `🔴 Poor fit for ${roleLevel} position. ${concerns.length > 0 ? concerns[0] : 'Major skill gaps'}. Not recommended.`;
+    }
+  }
 
-  generateIntelligentRecommendations(blockingIssues, skillsGap, finalScore) {
+  generateSmartRecommendations(finalScore, mustHaveMissing, preferredMissing) {
     const recommendations = [];
     
-    // Realistic recommendations based on score
-    if (finalScore >= 70) {
-      recommendations.push('✅ Strong candidate - prepare for interviews and highlight matching skills');
-      if (skillsGap.length > 0) {
-        recommendations.push(`📚 Consider learning ${skillsGap.slice(0, 2).join(', ')} to become even stronger`);
+    if (finalScore >= 85) {
+      recommendations.push('✅ Strong candidate - apply with confidence');
+      recommendations.push('💬 Prepare to discuss your matching experience in detail');
+      if (preferredMissing.length > 0) {
+        recommendations.push(`📚 Optional: Learn ${preferredMissing[0]} to stand out further`);
       }
+    } else if (finalScore >= 70) {
+      recommendations.push('🟡 Good fit - apply and address gaps in cover letter');
+      if (mustHaveMissing.length > 0) {
+        recommendations.push(`🎯 Priority: Gain experience with ${mustHaveMissing[0]}`);
+      }
+      recommendations.push('💬 Emphasize your learning ability and related experience');
     } else if (finalScore >= 50) {
-      recommendations.push('📊 Good potential - address key gaps to improve your chances');
-      if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT')) {
-        recommendations.push('💼 Highlight relevant projects and transferable experience');
+      recommendations.push('🟠 Partial fit - consider applying if you can address key gaps');
+      if (mustHaveMissing.length > 0) {
+        recommendations.push(`⚡ Critical: Learn ${mustHaveMissing.slice(0, 2).join(' and ')} first`);
       }
-      if (skillsGap.length > 0) {
-        recommendations.push(`📚 Focus on learning ${skillsGap.slice(0, 2).join(', ')} before applying`);
-      }
-    } else if (finalScore >= 30) {
-      recommendations.push('⚠️ Significant gaps - consider similar but more junior roles');
-      if (blockingIssues.includes('EXPERIENCE_INSUFFICIENT')) {
-        recommendations.push('💼 Gain 1-2 years more experience in related roles first');
-      }
-      if (blockingIssues.includes('SENIORITY_MISMATCH')) {
-        recommendations.push('📈 Look for mid-level positions that match your experience');
-      }
+      recommendations.push('📈 Look for similar roles with lower requirements');
     } else {
-      recommendations.push('❌ Major gaps - focus on building core qualifications first');
-      recommendations.push('📚 Build foundational skills and gain relevant experience');
+      recommendations.push('🔴 Poor fit - focus on building core skills first');
+      if (mustHaveMissing.length > 0) {
+        recommendations.push(`🎯 Build foundation: ${mustHaveMissing.slice(0, 2).join(', ')}`);
+      }
+      recommendations.push('📚 Consider junior roles to gain experience');
     }
     
     return recommendations;

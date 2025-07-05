@@ -20,6 +20,10 @@ interface ComprehensiveChartProps {
   skillsMatch: number;
   skillsGap: number;
   verdict: string;
+  roleLevel?: string;
+  mustHaveSkills?: { matched: string[], missing: string[] };
+  preferredSkills?: { matched: string[], missing: string[] };
+  relatedSkills?: string[];
 }
 
 export default function ComprehensiveChart({
@@ -28,7 +32,11 @@ export default function ComprehensiveChart({
   skillScore,
   skillsMatch,
   skillsGap,
-  verdict
+  verdict,
+  roleLevel,
+  mustHaveSkills,
+  preferredSkills,
+  relatedSkills
 }: ComprehensiveChartProps) {
   
   // Overall Score Doughnut Chart
@@ -141,12 +149,13 @@ export default function ComprehensiveChart({
           </div>
           <h4 className="font-semibold text-gray-800">Overall Match</h4>
           <div className={`inline-flex px-3 py-1 rounded-full text-xs font-bold mt-2 ${
-            verdict === 'QUALIFIED' ? 'bg-emerald-100 text-emerald-800' :
-            verdict === 'UNDERQUALIFIED' ? 'bg-rose-100 text-rose-800' :
-            verdict === 'COMPLETELY_UNQUALIFIED' ? 'bg-red-100 text-red-800' :
+            verdict === 'Strong fit' ? 'bg-emerald-100 text-emerald-800' :
+            verdict === 'Good fit' ? 'bg-blue-100 text-blue-800' :
+            verdict === 'Partial fit' ? 'bg-amber-100 text-amber-800' :
+            verdict === 'Poor fit' ? 'bg-red-100 text-red-800' :
             'bg-gray-100 text-gray-800'
           }`}>
-            {verdict?.replace('_', ' ')}
+            {verdict} {roleLevel && `(${roleLevel})`}
           </div>
         </div>
 
