@@ -10,14 +10,14 @@
 
 ## 📌 Overview
 
-**ResuScanX** is a production-ready web application that empowers job seekers by comparing their resume to job descriptions using **5 AI providers** with intelligent failover, realistic recruiter-style scoring, and comprehensive ATS simulation. Built for real-world hiring scenarios.
+**ResuScanX** is a production-ready web application that empowers job seekers by comparing their resume to job descriptions using **4 AI providers** with intelligent failover, realistic recruiter-style scoring, and comprehensive ATS simulation. Built for real-world hiring scenarios.
 
 ---
 
 ## ✨ Core Features
 
 ### 🤖 Multi-AI Analysis Engine
-- **5 AI Providers**: Gemini (2 keys) → Mistral → Cohere → OpenRouter
+- **4 AI Providers**: Gemini → Mistral → Cohere → OpenRouter
 - **Intelligent Failover**: Automatic provider rotation for 99.9% uptime
 - **Realistic Scoring**: 20-95% range matching real recruiter expectations
 - **Role-Level Detection**: Entry/Junior/Mid/Senior with appropriate criteria
@@ -36,7 +36,7 @@
 
 ### 💬 AI Career Assistant
 - **Context-Aware Chat**: Discusses your specific analysis results
-- **Multi-Provider Support**: Uses all 5 AI providers for reliability
+- **Multi-Provider Support**: Uses all 4 AI providers for reliability
 - **Interview Preparation**: Tailored advice based on your match score
 
 ### 📈 User Dashboard
@@ -182,7 +182,7 @@ NEXT_PUBLIC_API_URL=http://localhost:12001
 
 ## 👤 Author
 
-**Dheemanth M** - Full Stack Developer
+[**Dheemanth M**](https://dheemanthmadaiah.vercel.app)
 
 📧 [dheemanthm.official@gmail.com](mailto:dheemanthm.official@gmail.com)  
 🔗 [GitHub](https://github.com/dheemanthm2004)  
