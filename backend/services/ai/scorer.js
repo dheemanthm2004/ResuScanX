@@ -171,7 +171,8 @@ class RealisticScorer {
   }
 
   generateSummary(score, roleLevel, data) {
-    const { primaryStrengths, primaryConcerns } = this.identifyStrengths(data), this.identifyConcerns(data);
+    const primaryStrengths = this.identifyStrengths(data);
+    const primaryConcerns = this.identifyConcerns(data);
     
     if (score >= 85) {
       return `STRONG CANDIDATE: Excellent ${roleLevel}-level fit. ${primaryStrengths[0] || 'Meets all key requirements'}. High confidence hire.`;
