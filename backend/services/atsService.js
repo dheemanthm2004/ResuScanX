@@ -119,18 +119,18 @@ JSON response:
       // Fallback to regex parsing
     }
 
-    const scoreMatch = response.match(/score["\\s]*:?["\\s]*(\\d+)/i);
+    const scoreMatch = response.match(/score["\s]*:?["\s]*(\d+)/i);
     const score = scoreMatch ? Math.min(parseInt(scoreMatch[1]), 100) : 50;
 
-    const issuesMatch = response.match(/issues?["\\s]*:?[\\s]*\\[([^\\]]+)\\]/i);
+    const issuesMatch = response.match(/issues?["\s]*:?[\s]*\[([^\]]+)\]/i);
     const issues = issuesMatch ? 
-      issuesMatch[1].split(',').map(i => i.replace(/["\\']/g, '').trim()).filter(i => i.length > 0) : [];
+      issuesMatch[1].split(',').map(i => i.replace(/["']/g, '').trim()).filter(i => i.length > 0) : [];
 
-    const recsMatch = response.match(/recommendations?["\\s]*:?[\\s]*\\[([^\\]]+)\\]/i);
+    const recsMatch = response.match(/recommendations?["\s]*:?[\s]*\[([^\]]+)\]/i);
     const recommendations = recsMatch ?
-      recsMatch[1].split(',').map(r => r.replace(/["\\']/g, '').trim()).filter(r => r.length > 0) : [];
+      recsMatch[1].split(',').map(r => r.replace(/["']/g, '').trim()).filter(r => r.length > 0) : [];
 
-    const summaryMatch = response.match(/summary["\\s]*:?["\\s]*([^"\\n]+)/i);
+    const summaryMatch = response.match(/summary["\s]*:?["\s]*([^"\n]+)/i);
     const summary = summaryMatch ? summaryMatch[1].trim() : this.generateATSSummary(score, issues.length);
 
     return { score, issues, recommendations, summary };
@@ -162,8 +162,8 @@ JSON response:
     const recommendations = [];
     let score = 65;
 
-    const hasEmail = /@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/.test(resumeText);
-    const hasPhone = /\\b\\d{3}[-.\\s]?\\d{3}[-.\\s]?\\d{4}\\b/.test(resumeText);
+    const hasEmail = /@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(resumeText);
+    const hasPhone = /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/.test(resumeText);
     
     if (!hasEmail) {
       issues.push('ATS cannot locate email address - will be rejected');
@@ -178,9 +178,9 @@ JSON response:
     }
 
     const standardSections = {
-      'experience': /\\b(experience|employment|work history|professional experience)\\b/i,
-      'education': /\\b(education|academic|degree|university|college)\\b/i,
-      'skills': /\\b(skills|technical skills|competencies|proficiencies)\\b/i
+      'experience': /\b(experience|employment|work history|professional experience)\b/i,
+      'education': /\b(education|academic|degree|university|college)\b/i,
+      'skills': /\b(skills|technical skills|competencies|proficiencies)\b/i
     };
     
     Object.entries(standardSections).forEach(([section, regex]) => {
@@ -192,9 +192,9 @@ JSON response:
     });
 
     const complexFormatting = [
-      { pattern: /\\|{2,}/, issue: 'Table formatting detected', penalty: 15 },
+      { pattern: /\|{2,}/, issue: 'Table formatting detected', penalty: 15 },
       { pattern: /_{5,}/, issue: 'Underline formatting detected', penalty: 10 },
-      { pattern: /\\*{3,}/, issue: 'Asterisk formatting detected', penalty: 8 },
+      { pattern: /\*{3,}/, issue: 'Asterisk formatting detected', penalty: 8 },
       { pattern: /={3,}/, issue: 'Equals sign formatting detected', penalty: 8 }
     ];
     
@@ -207,7 +207,7 @@ JSON response:
     });
 
     const actionVerbs = ['managed', 'developed', 'created', 'implemented', 'analyzed', 'designed', 'led', 'coordinated', 'built', 'improved'];
-    const verbCount = actionVerbs.filter(verb => new RegExp(`\\\\b${verb}`, 'i').test(resumeText)).length;
+    const verbCount = actionVerbs.filter(verb => new RegExp(`\\b${verb}`, 'i').test(resumeText)).length;
     
     if (verbCount < 3) {
       issues.push('Insufficient action verbs - ATS keyword matching will fail');
@@ -215,8 +215,8 @@ JSON response:
       score -= 12;
     }
 
-    const hasStandardDates = /\\b(0[1-9]|1[0-2])\\/(19|20)\\d{2}\\b/.test(resumeText) || 
-                            /\\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\\s+(19|20)\\d{2}\\b/i.test(resumeText);
+    const hasStandardDates = /\b(0[1-9]|1[0-2])\/(19|20)\d{2}\b/.test(resumeText) || 
+                            /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(19|20)\d{2}\b/i.test(resumeText);
     
     if (!hasStandardDates && resumeText.length > 500) {
       issues.push('Non-standard date formats detected');
