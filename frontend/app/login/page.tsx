@@ -148,8 +148,35 @@ export default function LoginPage() {
               </button>
             </form>
             
+            {/* Demo Mode Button */}
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const response = await authAPI.demoLogin();
+                    localStorage.setItem('token', response.data.token);
+                    localStorage.setItem('user', JSON.stringify(response.data.user));
+                    localStorage.setItem('demoMode', 'true');
+                    toast.success('Demo mode activated! 🚀');
+                    router.push('/dashboard');
+                  } catch (error: any) {
+                    toast.error('Could not activate demo mode');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-bold py-3 px-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 text-base flex items-center justify-center"
+              >
+                <Sparkles className="h-5 w-5 mr-2" />
+                Try Demo Mode (No Sign Up Required)
+              </button>
+              <p className="text-xs text-gray-500 mt-2">Perfect for recruiters and quick exploration</p>
+            </div>
+            
             {/* Register Link */}
-            <div className="mt-8 text-center">
+            <div className="mt-6 text-center">
               <p className="text-gray-600">
                 Don't have an account?{' '}
                 <Link 

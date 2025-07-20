@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Brain, FileText, BarChart3, Zap } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { authAPI } from '@/lib/api';
 
 export default function HomePage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -85,8 +87,24 @@ export default function HomePage() {
                 </Link>
               ) : (
                 <>
-                  <Link href="/login" className="px-5 py-2.5 text-gray-700 font-semibold rounded-full hover:bg-gray-100 transition-all duration-200">
-                    Sign In
+                  <Link 
+                    href="/login"
+                    className="px-5 py-2.5 text-gray-700 font-semibold rounded-full hover:bg-gray-100 transition-all duration-200"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      try {
+                        const response = await authAPI.demoLogin();
+                        localStorage.setItem('token', response.data.token);
+                        localStorage.setItem('user', JSON.stringify(response.data.user));
+                        localStorage.setItem('demoMode', 'true');
+                        toast.success('Demo mode activated! 🚀');
+                        router.push('/dashboard');
+                      } catch (error) {
+                        router.push('/login');
+                      }
+                    }}
+                  >
+                    Try Demo
                   </Link>
                   <Link href="/register" className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold rounded-full hover:from-violet-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
                     ✨ Get Started
@@ -151,11 +169,29 @@ export default function HomePage() {
     </Link>
   ) : (
     <>
+      <button
+        onClick={async () => {
+          try {
+            const response = await authAPI.demoLogin();
+            localStorage.setItem('token', response.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            localStorage.setItem('demoMode', 'true');
+            toast.success('Demo mode activated! 🚀');
+            router.push('/dashboard');
+          } catch (error) {
+            toast.error('Could not activate demo mode');
+          }
+        }}
+        className="px-12 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold text-lg rounded-full hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-105"
+      >
+        ✨ Try Demo Mode
+      </button>
+
       <Link
         href="/register"
         className="px-12 py-4 bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold text-lg rounded-full hover:from-violet-700 hover:to-purple-700 transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-105"
       >
-        ✨ Get Started Free
+        🚀 Create Account
       </Link>
 
       <Link

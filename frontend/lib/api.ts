@@ -23,6 +23,8 @@ export const authAPI = {
   
   register: (name: string, email: string, password: string) =>
     api.post('/auth/register', { name, email, password }),
+    
+  demoLogin: () => api.get('/auth/demo'),
 };
 
 export const analysisAPI = {

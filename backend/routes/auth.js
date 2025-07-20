@@ -4,6 +4,31 @@ const User = require('../models/User');
 
 const router = express.Router();
 
+// Demo mode - no login required
+router.get('/demo', async (req, res) => {
+  try {
+    // Create a demo user object (not saved to database)
+    const demoUser = {
+      _id: 'demo-user-id',
+      name: 'Demo User',
+      email: 'demo@example.com'
+    };
+
+    // Generate token for demo user
+    const token = jwt.sign({ userId: demoUser._id }, process.env.JWT_SECRET, {
+      expiresIn: '24h' // Demo sessions last 24 hours
+    });
+
+    res.json({
+      token,
+      user: { id: demoUser._id, name: demoUser.name, email: demoUser.email },
+      demo: true
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Register
 router.post('/register', async (req, res) => {
   try {

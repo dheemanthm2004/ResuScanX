@@ -22,6 +22,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
+    const isDemo = localStorage.getItem('demoMode') === 'true';
     
     if (!token || !userData) {
       router.push('/login');
@@ -30,6 +31,13 @@ export default function DashboardPage() {
     
     setUser(JSON.parse(userData));
     loadHistory();
+    
+    if (isDemo) {
+      toast.success('Welcome to demo mode! 🚀', {
+        duration: 5000,
+        icon: '👋'
+      });
+    }
   }, [router]);
 
   const loadHistory = async () => {
@@ -64,6 +72,7 @@ export default function DashboardPage() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('demoMode');
     router.push('/');
   };
 

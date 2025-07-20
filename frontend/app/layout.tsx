@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     siteName: 'ResuScanX',
     images: [
       {
-        url: 'https://i.ibb.co/0y7QkrBJ/image.png',
+        url: 'https://i.ibb.co/TMVbBS1d/image.png',
         width: 1200,
         height: 630,
         alt: 'ResuScanX AI resume scan preview',
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     title: 'ResuScanX – AI Resume vs JD Analyzer',
     description:
       'Get detailed AI feedback, ATS compliance insights, and resume match scores.',
-    images: ['https://i.ibb.co/0y7QkrBJ/image.png'],
+    images: ['https://i.ibb.co/TMVbBS1d/image.png'],
   },
   icons: {
     icon: 'https://i.ibb.co/gczr2t9/Screenshot-2025-06-30-235805.png',

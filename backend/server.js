@@ -43,6 +43,15 @@ app.use('/api/analysis', analysisRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/ats', atsRoutes);
 
+// Health check and server info
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    message: 'ResuScanX API is running',
+    demoAvailable: true
+  });
+});
+
 // === DATABASE CONNECTION ===
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB connected'))
